@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 #include <memory>
-#include <SymbolTable.h>
+#include <symbol_table.h>
 #include <lexer.h>
 #include <map>
 

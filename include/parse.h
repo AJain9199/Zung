@@ -53,7 +53,7 @@ private:
     bool is(TokenType T);
     bool is(enum Operator op);
 
-    SymbolTable symTab_;
+    symbol_table symTab_;
 
     static std::map<enum Operator, int> precedence;
     static inline int getTokenPrecedence(enum Operator op) {
