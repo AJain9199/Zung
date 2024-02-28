@@ -3,9 +3,9 @@
 
 #include <string>
 #include <lexer.h>
-#include <AST.h>
 #include <utility>
 #include <variant>
+#include <vector>
 
 typedef std::variant<enum DefaultType, std::string> BasicType;
 

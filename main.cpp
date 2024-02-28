@@ -1,5 +1,6 @@
 #include <parse.h>
 #include <print_visitor.h>
+#include <code_generation_engine.h>
 
 int main() {
     ParsingEngine parse("../test.zng");
