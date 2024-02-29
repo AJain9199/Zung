@@ -36,35 +36,39 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 
     std::string id = eat_identifier();
 
+    auto *sym = new Symbols::SymbolTable();
+    symTab_ = sym;
+
+
     auto args = parseArgList();
 
-    Type return_type;
+    Symbols::Type return_type;
     if (is(':')) {
         lexer.advance();
         return_type = parseType();
     } else {
-        return_type = Type(VOID, {});
+        return_type = Symbols::Type(VOID, {});
     }
 
     auto body = parseCompoundStatement();
 
-    return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type),
+    auto func = std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type),
                                            std::move(body));
+    func->symbol_table = sym;
+    return func;
 }
 
-
-#pragma optimize( "", off )
 /* Parses an argument list for a function definition of the syntax:
  * (type identifier_ (,type identifier_)*)
  * */
-std::vector<SymbolTableEntry *> ParsingEngine::parseArgList() {
-    std::vector<SymbolTableEntry *> args = {};
+std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList() {
+    std::vector<Symbols::SymbolTableEntry *> args = {};
 
     eat('(');
     while (!is(')')) {
-        Type type = parseType();
+        Symbols::Type type = parseType();
         std::string name = eat_identifier();
-        args.push_back(symTab_.define(type, name, LOCAL));
+        args.push_back(symTab_->define(type, name, Symbols::LOCAL));
 
         if (!is(',')) {
             break;
@@ -74,7 +78,6 @@ std::vector<SymbolTableEntry *> ParsingEngine::parseArgList() {
     eat(')');
     return args;
 }
-#pragma optimize( "", on )
 
 /* Parses a compound statement of the syntax:
  * { (statement)* }
@@ -129,11 +132,12 @@ auto ParsingEngine::is(Tokens... tokens) {
     return (TokenType) NULL;
 }
 
-Type ParsingEngine::parseType() {
-    lexer.advance();
+Symbols::Type ParsingEngine::parseType() {
     if (is(IDENTIFIER, DEFAULT_TYPE) == DEFAULT_TYPE) {
+        lexer.advance();
         return {lexer.default_type(), {}};
     } else {
+        lexer.advance();
         return {lexer.identifier(), {}};
     }
 }
@@ -155,7 +159,7 @@ void ParsingEngine::eat(enum Keyword K) {
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
     std::string name = eat_identifier();
-    if (lexer.character() == '(') {
+    if (lexer.get() == PUNCTUATION && lexer.character() == '(') {
         // parse function call or array access
         eat('(');
         std::vector<std::unique_ptr<AST::Expression>> args;
@@ -180,9 +184,9 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
         }
 
         return std::make_unique<AST::ArrayIndexingExpression>(
-                std::make_unique<AST::VariableExpression>(symTab_.find(name)), std::move(indices));
+                std::make_unique<AST::VariableExpression>(symTab_->find(name)), std::move(indices));
     } else {
-        return std::make_unique<AST::VariableExpression>(symTab_.find(name));
+        return std::make_unique<AST::VariableExpression>(symTab_->find(name));
     }
 }
 
@@ -344,12 +348,12 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_if_statement() {
 std::unique_ptr<AST::Statement> ParsingEngine::parse_declaration_statement() {
     eat(VAR);
 
-    std::map<SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
-    Type type = parseType();
+    std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
+    Symbols::Type type = parseType();
 
     while (true) {
         std::string name = eat_identifier();
-        SymbolTableEntry *entry = symTab_.define(type, name, LOCAL);
+        Symbols::SymbolTableEntry *entry = symTab_->define(type, name, Symbols::LOCAL);
 
         if (is(EQ)) {
             lexer.advance();

@@ -1,6 +1,8 @@
-#include <symbol_table.h>
+#include <SymbolTable.h>
 
-SymbolTableEntry *symbol_table::define(Type type, std::string name, enum VarType varType) {
+using namespace Symbols;
+
+SymbolTableEntry *SymbolTable::define(Type type, std::string name, enum VarType varType) {
     auto *entry = new SymbolTableEntry();
     entry->name = std::move(name);
     entry->type = std::move(type);
@@ -12,7 +14,7 @@ SymbolTableEntry *symbol_table::define(Type type, std::string name, enum VarType
     return entry;
 }
 
-SymbolTableEntry *symbol_table::find(const std::string &name) {
+SymbolTableEntry *SymbolTable::find(const std::string &name) {
     for (auto &entry: subroutine_symbols_) {
         if (entry->name == name) {
             return entry;

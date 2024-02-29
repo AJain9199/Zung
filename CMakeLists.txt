@@ -19,9 +19,12 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 
 add_executable(Zung main.cpp src/lexer.cpp src/AST.cpp src/parse.cpp
         src/print_visitor.cpp
-        src/symbol_table.cpp)
+        src/symbol_table.cpp
+        src/code_generation_engine.cpp)
 
-llvm_map_components_to_libnames(llvm_lib core)
+execute_process(COMMAND ~/llvm-project/build/bin/llvm-config --libs core --system-libs RESULT_VARIABLE l OUTPUT_VARIABLE llvm_libs)
+
+message(STATUS "LLVM_LIBS: ${llvm_libs} ${l}")
 
 # Link against LLVM libraries
-target_link_libraries(Zung ${llvm_libs})
+target_link_libraries(Zung LLVMCore LLVMRemarks LLVMBitstreamReader LLVMBinaryFormat LLVMTargetParser LLVMSupport LLVMDemangle rt dl m)

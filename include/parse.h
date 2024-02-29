@@ -17,10 +17,10 @@ private:
 
     std::unique_ptr<AST::Function> parseFunction();
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
-    std::vector<SymbolTableEntry *> parseArgList();
+    std::vector<Symbols::SymbolTableEntry *> parseArgList();
 
 
-    Type parseType();
+    Symbols::Type parseType();
 
     /* Parse expressions */
     std::unique_ptr<AST::Expression> parseNumericLiteralExpression();
@@ -53,7 +53,7 @@ private:
     bool is(TokenType T);
     bool is(enum Operator op);
 
-    symbol_table symTab_;
+    Symbols::SymbolTable *symTab_;
 
     static std::map<enum Operator, int> precedence;
     static inline int getTokenPrecedence(enum Operator op) {

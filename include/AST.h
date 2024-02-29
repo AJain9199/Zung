@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 #include <memory>
-#include <symbol_table.h>
+#include <SymbolTable.h>
 #include <lexer.h>
 #include <map>
 
@@ -70,6 +70,8 @@ namespace AST {
     public:
         Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<CompoundStatement> stmt);
 
+        Symbols::SymbolTable *symbol_table;
+
         std::unique_ptr<FunctionPrototype> prototype;
         std::unique_ptr<CompoundStatement> body;
 
@@ -78,11 +80,11 @@ namespace AST {
 
     class FunctionPrototype : public AbstractNode {
     public:
-        FunctionPrototype(std::string n, const std::vector<SymbolTableEntry *> &a, Type ret);
+        FunctionPrototype(std::string n, const std::vector<Symbols::SymbolTableEntry *> &a, Symbols::Type ret);
 
         std::string name;
-        std::vector<SymbolTableEntry *> args;
-        Type return_type;
+        std::vector<Symbols::SymbolTableEntry *> args;
+        Symbols::Type return_type;
 
         INJECT_ACCEPT();
     };
@@ -106,9 +108,9 @@ namespace AST {
     class DeclarationStatement : public Statement {
 
     public:
-        explicit DeclarationStatement(std::map<SymbolTableEntry *, std::unique_ptr<Expression>> i_list);
+        explicit DeclarationStatement(std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression>> i_list);
 
-        std::map<SymbolTableEntry *, std::unique_ptr<Expression>> init_list;
+        std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression>> init_list;
 
         INJECT_ACCEPT();
     };
@@ -143,9 +145,9 @@ namespace AST {
 
     class VariableExpression : public AssignableExpression {
     public:
-        explicit VariableExpression(SymbolTableEntry *var);
+        explicit VariableExpression(Symbols::SymbolTableEntry *var);
 
-        SymbolTableEntry *variable{};
+        Symbols::SymbolTableEntry *variable{};
 
         INJECT_ACCEPT();
     };

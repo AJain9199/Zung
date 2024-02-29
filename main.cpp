@@ -7,4 +7,7 @@ int main() {
     auto p = parse.parseTranslationUnit();
     PrintVisitor pv;
     p->accept(pv);
+
+    CodeGenerationEngine cge;
+    p->accept(cge);
 }

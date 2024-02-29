@@ -2,7 +2,7 @@
 #include <AST.h>
 #include <iostream>
 
-#define INDENT() for (int i = 0; i < tab_level; i++) std::cout << "  ";
+#define INDENT() for (int i = 0; i < tab_level; i++) std::cout << "  "
 
 void PrintVisitor::visit(const AST::TranslationUnit &unit) {
     std::cout << "Top-level Translation Unit" << std::endl;
@@ -33,6 +33,11 @@ void PrintVisitor::visit(const AST::FunctionPrototype &prototype) {
     tab_level++;
     INDENT();
     std::cout << "Function " << prototype.name << " : " << prototype.args.size() << " Parameters" << std::endl;
+
+    for (auto &j : prototype.args) {
+        INDENT();
+        std::cout << j->name << " : " << std::get<enum DefaultType>(j->type.type) << std::endl;
+    }
     tab_level--;
 }
 
@@ -116,10 +121,10 @@ void PrintVisitor::visit(const AST::ArrayIndexingExpression &) {
     tab_level--;
 }
 
-void PrintVisitor::visit(const AST::FunctionCallExpression &) {
+void PrintVisitor::visit(const AST::FunctionCallExpression &call) {
     tab_level++;
     INDENT();
-    std::cout << "Function Call Expression" << std::endl;
+    std::cout << "Function Call Expression" << call.callee <<  std::endl;
     tab_level--;
 }
 

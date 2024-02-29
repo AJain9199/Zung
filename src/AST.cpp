@@ -2,6 +2,7 @@
 #include <utility>
 
 using namespace AST;
+using namespace Symbols;
 
 FunctionPrototype::FunctionPrototype(std::string n, const std::vector<SymbolTableEntry *> &a, Type ret) : name(
         std::move(n)), args(a),
