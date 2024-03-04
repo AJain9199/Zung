@@ -480,6 +480,12 @@ void ParsingEngine::parseClass() {
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);
     (*type_table)[id] = t;
+    bool packed = false;
+
+    if (is(PACKED)) {
+        eat(PACKED);
+        packed = true;
+    }
 
     eat('{');
     std::vector<llvm::Type *> members;
@@ -495,5 +501,5 @@ void ParsingEngine::parseClass() {
         eat(';');
     }
     eat('}');
-    t->setBody(members, true);
+    t->setBody(members, packed);
 }

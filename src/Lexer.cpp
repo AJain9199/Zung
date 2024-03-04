@@ -137,7 +137,9 @@ TokenType Lexer::getToken() {
             keyword_ = IF;
         } else if(identifier_ == "class") {
             keyword_ = CLASS;
-        } else {
+        } else if(identifier_ == "packed") {
+            keyword_ = PACKED;
+        }else {
             return IDENTIFIER;
         }
 

@@ -60,7 +60,8 @@ enum Keyword {
     IF,
     VAR,
     EXTERN,
-    CLASS
+    CLASS,
+    PACKED
 };
 
 enum DeclarationSpecifier {
