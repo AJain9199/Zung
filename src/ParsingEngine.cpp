@@ -192,26 +192,39 @@ auto ParsingEngine::is(Tokens... tokens) {
 llvm::Type *ParsingEngine::parseType() {
     static std::regex type_regex("i(\\d+)");
 
+    llvm::Type *basic_type;
+
     if (is(IDENTIFIER, DEFAULT_TYPE) == DEFAULT_TYPE) {
         lexer.advance();
         switch (lexer.default_type()) {
             case INT:
-                return llvm::Type::getInt32Ty(*llvm_context_);
+                basic_type =  llvm::Type::getInt32Ty(*llvm_context_);
+                break;
             case CHAR:
-                return llvm::Type::getInt8Ty(*llvm_context_);
+                basic_type = llvm::Type::getInt8Ty(*llvm_context_);
+                break;
             case VOID:
-                return llvm::Type::getVoidTy(*llvm_context_);
+                basic_type =  llvm::Type::getVoidTy(*llvm_context_);
+                break;
         }
     } else { // token is an identifier
         std::string id = eat_identifier();
         if (std::regex_match(id, type_regex)) {
             int width = std::stoi(id.substr(1));
-            return llvm::Type::getIntNTy(*llvm_context_, width);
+            basic_type = llvm::Type::getIntNTy(*llvm_context_, width);
+        } else {
+            basic_type = (*type_table)[id];
         }
-
-        return (*type_table)[id];
     }
-    return nullptr;
+
+    if (is(MUL)) {
+        while (is(MUL)) {
+            lexer.advance();
+            basic_type = llvm::PointerType::get(basic_type, 0);
+        }
+    }
+
+    return basic_type;
 }
 
 void ParsingEngine::eat(enum Keyword K) {
