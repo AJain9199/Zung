@@ -29,8 +29,3 @@ SymbolTableEntry *SymbolTable::find(const std::string &name) {
 
     return nullptr;
 }
-
-type_t::type_t(BasicType t, std::vector<int> a) : type(std::move(t)), array_dim(std::move(a)) {}
-
-type_t::type_t() : type(), array_dim({}) {}
-
