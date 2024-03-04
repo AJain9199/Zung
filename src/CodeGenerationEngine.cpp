@@ -126,10 +126,10 @@ void CodeGenerationEngine::visit(const AST::FunctionPrototype &prototype) {
     std::vector<llvm::Type *> args(prototype.args.size());
     uint i = 0;
     for (const auto &arg: prototype.args) {
-        args[i++] = get_llvm_type(arg->type);
+        args[i++] = arg->type;
     }
 
-    FunctionType *FT = FunctionType::get(get_llvm_type(prototype.return_type), args, false);
+    FunctionType *FT = FunctionType::get(prototype.return_type, args, false);
 
     Function *F = Function::Create(FT, Function::ExternalLinkage, prototype.name, module_.get());
 
@@ -200,21 +200,6 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
     }
 }
 
-llvm::Type *CodeGenerationEngine::get_llvm_type(const Symbols::BasicType &type) {
-    if (std::holds_alternative<enum DefaultType>(type)) {
-        switch (std::get<enum DefaultType>(type)) {
-            case INT:
-                return Type::getInt32Ty(*llvm_context_);
-            case VOID:
-                return Type::getVoidTy(*llvm_context_);
-            default:
-                throw std::runtime_error("Not implemented yet");
-        }
-    } else {
-        throw std::runtime_error("Not implemented yet");
-    }
-}
-
 void CodeGenerationEngine::get_llvm_function(const std::string &name) {
     if (auto *F = module_->getFunction(name)) {
         STACK_RET(F);
@@ -234,23 +219,6 @@ CodeGenerationEngine::create_entry_block_alloca(llvm::Function *func, const std:
     return IRBuilder<>(&func->getEntryBlock(), func->getEntryBlock().begin()).CreateAlloca(type, nullptr, var_name);
 }
 
-llvm::Type *CodeGenerationEngine::get_llvm_type(const Symbols::Type &type) {
-    if (!type.array_dim.empty()) {
-        Type *elem_type = get_llvm_type(type.type);
-        for (auto &i: type.array_dim) {
-            if (i < 0) {
-                throw std::runtime_error("Array dimension must be positive");
-            }
-
-            elem_type = ArrayType::get(elem_type, i);
-        }
-
-        return elem_type;
-    } else {
-        return get_llvm_type(type.type);
-    }
-}
-
 void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
     expression.Operand->accept(*this);
     auto *val = STACK_GET(Value *);
@@ -266,10 +234,10 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
     std::vector<llvm::Type *> args(function.args.size());
     uint i = 0;
     for (const auto &arg: function.args) {
-        args[i++] = get_llvm_type(arg);
+        args[i++] = arg;
     }
 
-    FunctionType *FT = FunctionType::get(get_llvm_type(function.return_type), args, false);
+    FunctionType *FT = FunctionType::get(function.return_type, args, false);
     Function *F = Function::Create(FT, Function::ExternalLinkage, function.name, module_.get());
 
     STACK_RET(F);

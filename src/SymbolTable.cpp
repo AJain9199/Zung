@@ -2,10 +2,10 @@
 
 using namespace Symbols;
 
-SymbolTableEntry *SymbolTable::define(Type type, std::string name, enum VarType varType) {
+SymbolTableEntry *SymbolTable::define(llvm::Type *type, std::string name, enum VarType varType) {
     auto *entry = new SymbolTableEntry();
     entry->name = std::move(name);
-    entry->type = std::move(type);
+    entry->type = type;
     if (varType == GLOBAL) {
         global_symbols_.push_back(entry);
     } else {

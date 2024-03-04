@@ -1,6 +1,8 @@
 #include <ParsingEngine.h>
+#include <AST.h>
+#include "llvm/IR/Type.h"
+#include "llvm/IR/DerivedTypes.h"
 #include <iostream>
-#include "AST.h"
 
 std::map<enum Operator, int> ParsingEngine::precedence = {
         {EQ,          1},
@@ -43,13 +45,13 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
 std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
     eat(EXTERN);
     std::string id = eat_identifier();
-    std::vector<Symbols::Type> args = {};
+    std::vector<llvm::Type *> args = {};
     eat('(');
     while (!is(')')) {
-        Symbols::Type type = parseType();
+        llvm::Type *type = parseType();
         std::string name = eat_identifier();
 
-            args.push_back(type);
+        args.push_back(type);
 
         if (!is(',')) {
             break;
@@ -57,12 +59,12 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
         eat(',');
     }
     eat(')');
-    Symbols::Type return_type;
+    llvm::Type *return_type;
     if (is(':')) {
         lexer.advance();
         return_type = parseType();
     } else {
-        return_type = Symbols::Type(VOID, {});
+        return_type = llvm::Type::getVoidTy(*llvm_context_);
     }
     eat(';');
     return std::make_unique<AST::ExternFunction>(id, args, return_type);
@@ -82,17 +84,18 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 
     auto args = parseArgList(true);
 
-    Symbols::Type return_type;
+    llvm::Type *return_type;
     if (is(':')) {
         lexer.advance();
         return_type = parseType();
     } else {
-        return_type = Symbols::Type(VOID, {});
+        return_type = llvm::Type::getVoidTy(*llvm_context_);
     }
 
-    if(is(';')) {
+    if (is(';')) {
         eat(';');
-        return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type), nullptr);
+        return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type),
+                                               nullptr);
     }
 
     auto body = parseCompoundStatement();
@@ -111,7 +114,7 @@ std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool add_to
 
     eat('(');
     while (!is(')')) {
-        Symbols::Type type = parseType();
+        llvm::Type *type = parseType();
         std::string name = eat_identifier();
 
         if (add_to_symtab) {
@@ -180,13 +183,17 @@ auto ParsingEngine::is(Tokens... tokens) {
     return (TokenType) NULL;
 }
 
-Symbols::Type ParsingEngine::parseType() {
+llvm::Type *ParsingEngine::parseType() {
     if (is(IDENTIFIER, DEFAULT_TYPE) == DEFAULT_TYPE) {
         lexer.advance();
-        return {lexer.default_type(), {}};
-    } else {
-        lexer.advance();
-        return {lexer.identifier(), {}};
+        switch (lexer.default_type()) {
+            case INT:
+                return llvm::Type::getInt32Ty(*llvm_context_);
+            case CHAR:
+                return llvm::Type::getInt8Ty(*llvm_context_);
+            case VOID:
+                return llvm::Type::getVoidTy(*llvm_context_);
+        }
     }
 }
 
@@ -399,7 +406,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_declaration_statement() {
     eat(VAR);
 
     std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
-    Symbols::Type type = parseType();
+    llvm::Type *type = parseType();
 
     while (true) {
         std::string name = eat_identifier();

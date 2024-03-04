@@ -3,10 +3,12 @@
 
 #include <Lexer.h>
 #include <AST.h>
+#include <llvm/IR/Type.h>
+#include "llvm/IR/LLVMContext.h"
 
 class ParsingEngine {
 public:
-    explicit ParsingEngine(const std::string& filename) : lexer(filename) {
+    explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)) {
         lexer.advance();
     }
 
@@ -21,7 +23,7 @@ private:
     std::unique_ptr<AST::ExternFunction> parseExtern();
 
 
-    Symbols::Type parseType();
+    llvm::Type *parseType();
 
     /* Parse expressions */
     std::unique_ptr<AST::Expression> parseNumericLiteralExpression();
@@ -54,7 +56,7 @@ private:
     bool is(TokenType T);
     bool is(enum Operator op);
 
-    Symbols::SymbolTable *symTab_;
+    Symbols::SymbolTable *symTab_{};
 
     static std::map<enum Operator, int> precedence;
     static inline int getTokenPrecedence(enum Operator op) {
@@ -64,6 +66,8 @@ private:
         }
         return prec;
     }
+
+    std::unique_ptr<llvm::LLVMContext> llvm_context_;
 };
 
 #endif //ZUNG_PARSER_H
