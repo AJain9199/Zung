@@ -1,5 +1,5 @@
-#ifndef ZUNG_CODE_GENERATION_ENGINE_H
-#define ZUNG_CODE_GENERATION_ENGINE_H
+#ifndef ZUNG_CODEGENERATIONENGINE_H
+#define ZUNG_CODEGENERATIONENGINE_H
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -81,4 +81,4 @@ public:
     }
 };
 
-#endif //ZUNG_CODE_GENERATION_ENGINE_H
+#endif //ZUNG_CODEGENERATIONENGINE_H

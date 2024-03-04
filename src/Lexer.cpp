@@ -1,6 +1,5 @@
 #include <iostream>
-#include "lexer.h"
-#include <logger.h>
+#include "Lexer.h"
 
 Lexer::Lexer(const std::string &filename) : filestream_(filename) {}
 

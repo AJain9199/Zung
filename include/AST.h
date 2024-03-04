@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 #include <SymbolTable.h>
-#include <lexer.h>
+#include <Lexer.h>
 #include <map>
 
 #define INJECT_ACCEPT() void accept(ASTVisitor &v) override { v.visit(*this); }

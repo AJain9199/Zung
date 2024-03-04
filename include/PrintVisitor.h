@@ -1,5 +1,5 @@
-#ifndef ZUNG_PRINT_VISITOR_H
-#define ZUNG_PRINT_VISITOR_H
+#ifndef ZUNG_PRINTVISITOR_H
+#define ZUNG_PRINTVISITOR_H
 
 #include <AST.h>
 
@@ -25,4 +25,4 @@ public:
     void visit(const AST::ExternFunction &) override;
 };
 
-#endif //ZUNG_PRINT_VISITOR_H
+#endif //ZUNG_PRINTVISITOR_H

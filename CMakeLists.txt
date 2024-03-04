@@ -19,10 +19,10 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 
 add_compile_options(-O0)
 
-add_executable(Zung main.cpp src/lexer.cpp src/AST.cpp src/parse.cpp
-        src/print_visitor.cpp
-        src/symbol_table.cpp
-        src/code_generation_engine.cpp)
+add_executable(Zung main.cpp src/Lexer.cpp src/AST.cpp src/ParsingEngine.cpp
+        src/PrintVisitor.cpp
+        src/SymbolTable.cpp
+        src/CodeGenerationEngine.cpp)
 
 execute_process(COMMAND ~/llvm-project/build/bin/llvm-config --libs core --system-libs RESULT_VARIABLE l OUTPUT_VARIABLE llvm_libs)
 

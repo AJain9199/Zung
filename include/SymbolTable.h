@@ -2,7 +2,7 @@
 #define ZUNG_SYMBOLTABLE_H
 
 #include <string>
-#include <lexer.h>
+#include <Lexer.h>
 #include <utility>
 #include <variant>
 #include <vector>

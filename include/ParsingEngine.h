@@ -1,7 +1,7 @@
 #ifndef ZUNG_PARSER_H
 #define ZUNG_PARSER_H
 
-#include <lexer.h>
+#include <Lexer.h>
 #include <AST.h>
 
 class ParsingEngine {
