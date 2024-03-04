@@ -68,6 +68,8 @@ public:
 
     void visit(const AST::NumericConstantExpression &) override;
 
+    void visit(const AST::ExternFunction &) override;
+
     inline void stack_return(void * val) {
         stack_.push(val);
     }

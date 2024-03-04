@@ -131,6 +131,11 @@ TokenType Lexer::getToken() {
         } else if (identifier_ == "var") {
             keyword_ = VAR;
             return KEYWORD;
+        } else if (identifier_ == "extern") {
+            keyword_ = EXTERN;
+            return KEYWORD;
+        } else if (identifier_ == "if") {
+            keyword_ = IF;
         } else {
             return IDENTIFIER;
         }

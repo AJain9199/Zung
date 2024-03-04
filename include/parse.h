@@ -17,7 +17,8 @@ private:
 
     std::unique_ptr<AST::Function> parseFunction();
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
-    std::vector<Symbols::SymbolTableEntry *> parseArgList();
+    std::vector<Symbols::SymbolTableEntry *> parseArgList(bool add_to_symtab);
+    std::unique_ptr<AST::ExternFunction> parseExtern();
 
 
     Symbols::Type parseType();

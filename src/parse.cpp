@@ -3,18 +3,27 @@
 #include "AST.h"
 
 std::map<enum Operator, int> ParsingEngine::precedence = {
-        {EQ, 1},
-        {LOGICAL_OR, 2},
+        {EQ,          1},
+        {LOGICAL_OR,  2},
         {LOGICAL_AND, 3},
-        {OR, 4},
-        {XOR, 5},
-        {AND, 6},
-        {EQ_EQ, 7}, {NEQ, 7},
-        {GE, 8}, {GEQ, 8}, {LE, 8}, {LEQ, 8},
-        {LSH, 9}, {RSH, 9},
-        {ADD, 10}, {SUB, 10},
-        {MUL, 11}, {DIV, 11}, {FLR, 11}, {MOD, 11},
-        {EXP, 12}
+        {OR,          4},
+        {XOR,         5},
+        {AND,         6},
+        {EQ_EQ,       7},
+        {NEQ,         7},
+        {GE,          8},
+        {GEQ,         8},
+        {LE,          8},
+        {LEQ,         8},
+        {LSH,         9},
+        {RSH,         9},
+        {ADD,         10},
+        {SUB,         10},
+        {MUL,         11},
+        {DIV,         11},
+        {MOD,         11},
+        {EXP,         12},
+        {FLR,         12}
 };
 
 AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
@@ -23,9 +32,40 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
         if (is(FN)) {
             auto f = parseFunction();
             translation_unit->functions.push_back(std::move(f));
+        } else if (is(EXTERN)) {
+            auto f = parseExtern();
+            translation_unit->prototypes.push_back(std::move(f));
         }
     }
     return translation_unit;
+}
+
+std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
+    eat(EXTERN);
+    std::string id = eat_identifier();
+    std::vector<Symbols::Type> args = {};
+    eat('(');
+    while (!is(')')) {
+        Symbols::Type type = parseType();
+        std::string name = eat_identifier();
+
+            args.push_back(type);
+
+        if (!is(',')) {
+            break;
+        }
+        eat(',');
+    }
+    eat(')');
+    Symbols::Type return_type;
+    if (is(':')) {
+        lexer.advance();
+        return_type = parseType();
+    } else {
+        return_type = Symbols::Type(VOID, {});
+    }
+    eat(';');
+    return std::make_unique<AST::ExternFunction>(id, args, return_type);
 }
 
 /* Parses a function definition of the syntax:
@@ -40,7 +80,7 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
     symTab_ = sym;
 
 
-    auto args = parseArgList();
+    auto args = parseArgList(true);
 
     Symbols::Type return_type;
     if (is(':')) {
@@ -50,10 +90,15 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
         return_type = Symbols::Type(VOID, {});
     }
 
+    if(is(';')) {
+        eat(';');
+        return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type), nullptr);
+    }
+
     auto body = parseCompoundStatement();
 
     auto func = std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type),
-                                           std::move(body));
+                                                std::move(body));
     func->symbol_table = sym;
     return func;
 }
@@ -61,14 +106,17 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 /* Parses an argument list for a function definition of the syntax:
  * (type identifier_ (,type identifier_)*)
  * */
-std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList() {
+std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool add_to_symtab) {
     std::vector<Symbols::SymbolTableEntry *> args = {};
 
     eat('(');
     while (!is(')')) {
         Symbols::Type type = parseType();
         std::string name = eat_identifier();
-        args.push_back(symTab_->define(type, name, Symbols::LOCAL));
+
+        if (add_to_symtab) {
+            args.push_back(symTab_->define(type, name, Symbols::LOCAL));
+        }
 
         if (!is(',')) {
             break;
@@ -169,6 +217,8 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
                 eat(',');
             }
         }
+
+        eat(')');
 
         return std::make_unique<AST::FunctionCallExpression>(name, std::move(args));
     } else if (lexer.character() == '[') {

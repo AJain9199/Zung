@@ -1,7 +1,10 @@
 #include <code_generation_engine.h>
+#include <iostream>
 
 #define STACK_RET(x) stack_return(x); return
 #define STACK_GET(x) (x)(stack_get())
+
+#define i1(x) builder_->CreateTrunc(x, Type::getInt1Ty(*llvm_context_))
 
 using namespace llvm;
 
@@ -41,13 +44,41 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
 
     switch (expression.op) {
         case ADD:
-            STACK_RET(builder_->CreateAdd(LHS, RHS, "addtmp"));
+        STACK_RET(builder_->CreateAdd(LHS, RHS, "addtmp"));
         case SUB:
-            STACK_RET(builder_->CreateSub(LHS, RHS, "subtmp"));
+        STACK_RET(builder_->CreateSub(LHS, RHS, "subtmp"));
         case MUL:
-            STACK_RET(builder_->CreateMul(LHS, RHS, "multmp"));
+        STACK_RET(builder_->CreateMul(LHS, RHS, "multmp"));
         case DIV:
-            STACK_RET(builder_->CreateSDiv(LHS, RHS, "divtmp"));
+        STACK_RET(builder_->CreateSDiv(LHS, RHS, "divtmp"));
+        case MOD:
+        STACK_RET(builder_->CreateSRem(LHS, RHS, "modtmp"));
+        case RSH:
+        STACK_RET(builder_->CreateLShr(LHS, RHS, "rshtmp"));
+        case LSH:
+        STACK_RET(builder_->CreateShl(LHS, RHS, "lshtmp"));
+        case AND:
+        STACK_RET(builder_->CreateAnd(LHS, RHS, "andtmp"));
+        case OR:
+        STACK_RET(builder_->CreateOr(LHS, RHS, "ortmp"));
+        case XOR:
+        STACK_RET(builder_->CreateXor(LHS, RHS, "xortmp"));
+        case LOGICAL_AND:
+        STACK_RET(builder_->CreateAnd(i1(LHS), i1(RHS), "andtmp"));
+        case LOGICAL_OR:
+        STACK_RET(builder_->CreateOr(i1(LHS), i1(RHS), "ortmp"));
+        case GE:
+        STACK_RET(builder_->CreateICmpSGT(LHS, RHS, "gttmp"));
+        case LE:
+        STACK_RET(builder_->CreateICmpSLT(LHS, RHS, "gttmp"));
+        case GEQ:
+        STACK_RET(builder_->CreateICmpSGE(LHS, RHS, "gttmp"));
+        case LEQ:
+        STACK_RET(builder_->CreateICmpSLE(LHS, RHS, "gttmp"));
+        case EQ:
+        STACK_RET(builder_->CreateICmpEQ(LHS, RHS, "gttmp"));
+        case NEQ:
+        STACK_RET(builder_->CreateICmpNE(LHS, RHS, "gttmp"));
         default:
             throw std::runtime_error("Not implemented yet");
     }
@@ -60,6 +91,15 @@ void CodeGenerationEngine::visit(const AST::Function &function) {
 
     get_llvm_function(P.name);
     auto *F = STACK_GET(Function *);
+
+
+    if (function.body == nullptr) {
+        STACK_RET(F);
+    }
+
+    if (!F->empty()) {
+        throw std::runtime_error("Function already defined");
+    }
 
     BasicBlock *block = BasicBlock::Create(*llvm_context_, "entry", F);
     builder_->SetInsertPoint(block);
@@ -101,7 +141,6 @@ void CodeGenerationEngine::visit(const AST::FunctionPrototype &prototype) {
     STACK_RET(F);
 }
 
-
 void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
     Function *F = builder_->GetInsertBlock()->getParent();
 
@@ -128,12 +167,16 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
     }
 
     std::vector<Value *> args(expression.args.size());
+    int i = 0;
     for (auto &arg: expression.args) {
         arg->accept(*this);
-        args.push_back(std::any_cast<Value *>(stack_get()));
+        args[i++] = (STACK_GET(Value *));
     }
-
-    STACK_RET(builder_->CreateCall(F, args, "calltmp"));
+    if (F->getReturnType()->isVoidTy()) {
+        STACK_RET(builder_->CreateCall(F, args));
+    } else {
+        STACK_RET(builder_->CreateCall(F, args, "calltmp"));
+    }
 }
 
 
@@ -144,7 +187,13 @@ void CodeGenerationEngine::visit(const AST::CompoundStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
-    for (auto &i : unit.functions) {
+    for (auto &i: unit.prototypes) {
+        i->accept(*this);
+        auto *F = STACK_GET(Function *);
+        F->print(errs());
+    }
+
+    for (auto &i: unit.functions) {
         i->accept(*this);
         auto *F = STACK_GET(Function *);
         F->print(errs());
@@ -188,7 +237,7 @@ CodeGenerationEngine::create_entry_block_alloca(llvm::Function *func, const std:
 llvm::Type *CodeGenerationEngine::get_llvm_type(const Symbols::Type &type) {
     if (!type.array_dim.empty()) {
         Type *elem_type = get_llvm_type(type.type);
-        for (auto &i : type.array_dim) {
+        for (auto &i: type.array_dim) {
             if (i < 0) {
                 throw std::runtime_error("Array dimension must be positive");
             }
@@ -207,8 +256,21 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
     auto *val = STACK_GET(Value *);
     switch (expression.op) {
         case SUB:
-            STACK_RET(builder_->CreateNeg(val));
+        STACK_RET(builder_->CreateNeg(val));
         default:
             throw std::runtime_error("Not implemented yet");
     }
+}
+
+void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
+    std::vector<llvm::Type *> args(function.args.size());
+    uint i = 0;
+    for (const auto &arg: function.args) {
+        args[i++] = get_llvm_type(arg);
+    }
+
+    FunctionType *FT = FunctionType::get(get_llvm_type(function.return_type), args, false);
+    Function *F = Function::Create(FT, Function::ExternalLinkage, function.name, module_.get());
+
+    STACK_RET(F);
 }

@@ -22,6 +22,7 @@ public:
     void visit(const AST::BinaryExpression &) override;
     void visit(const AST::UnaryExpression &) override;
     void visit(const AST::NumericConstantExpression &) override;
+    void visit(const AST::ExternFunction &) override;
 };
 
 #endif //ZUNG_PRINT_VISITOR_H

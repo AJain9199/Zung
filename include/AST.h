@@ -15,6 +15,7 @@ namespace AST {
     class ASTVisitor;
 
     class AbstractNode;
+    class ExternFunction;
     class TranslationUnit;
     class Function;
     class FunctionPrototype;
@@ -50,6 +51,7 @@ namespace AST {
         virtual void visit(const AST::FunctionCallExpression &) = 0;
         virtual void visit(const AST::NumericConstantExpression &) = 0;
         virtual void visit(const AST::TranslationUnit &) = 0;
+        virtual void visit(const AST::ExternFunction &) = 0;
     };
 
     class AbstractNode {
@@ -62,6 +64,18 @@ namespace AST {
     class TranslationUnit : public AbstractNode {
     public:
         std::vector<std::unique_ptr<Function>> functions;
+        std::vector<std::unique_ptr<ExternFunction>> prototypes;
+
+        INJECT_ACCEPT();
+    };
+
+    class ExternFunction : public AbstractNode {
+    public:
+        std::string name;
+        std::vector<Symbols::Type> args;
+        Symbols::Type return_type;
+
+        ExternFunction(std::string name, std::vector<Symbols::Type> args, Symbols::Type return_type): name(std::move(name)), args(std::move(args)), return_type(std::move(return_type)) {}
 
         INJECT_ACCEPT();
     };

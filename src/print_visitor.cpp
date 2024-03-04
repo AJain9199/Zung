@@ -24,7 +24,12 @@ void PrintVisitor::visit(const AST::Function &function) {
 
     INDENT();
     std::cout << "Function Body: " << std::endl;
-
+    if (function.body == nullptr) {
+        INDENT();
+        std::cout << "Function has no body" << std::endl;
+        tab_level--;
+        return;
+    }
     function.body->accept(*this);
     tab_level--;
 }
@@ -130,4 +135,11 @@ void PrintVisitor::visit(const AST::FunctionCallExpression &call) {
 
 void PrintVisitor::visit(const AST::AbstractNode &) {
     std::cout << "Unspecified node type";
+}
+
+void PrintVisitor::visit(const AST::ExternFunction &) {
+    tab_level++;
+    INDENT();
+    std::cout << "Extern Function" << std::endl;
+    tab_level--;
 }
