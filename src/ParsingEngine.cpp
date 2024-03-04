@@ -31,6 +31,7 @@ std::map<enum Operator, int> ParsingEngine::precedence = {
 
 AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
     auto *translation_unit = new AST::TranslationUnit();
+    type_table = &translation_unit->type_table;
     while (lexer.hasMoreTokens()) {
         if (is(FN)) {
             auto f = parseFunction();
@@ -38,6 +39,10 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
         } else if (is(EXTERN)) {
             auto f = parseExtern();
             translation_unit->prototypes.push_back(std::move(f));
+        } else if (is(CLASS)) {
+            parseClass();
+        } else {
+            std::cerr << "Unexpected token" << std::endl;
         }
     }
     return translation_unit;
@@ -203,6 +208,8 @@ llvm::Type *ParsingEngine::parseType() {
             int width = std::stoi(id.substr(1));
             return llvm::Type::getIntNTy(*llvm_context_, width);
         }
+
+        return (*type_table)[id];
     }
     return nullptr;
 }
@@ -466,4 +473,27 @@ void ParsingEngine::eat(enum Operator op) {
 
 bool ParsingEngine::is(enum Operator op) {
     return lexer.get() == OP && lexer.operator_token() == op;
+}
+
+void ParsingEngine::parseClass() {
+    eat(CLASS);
+    std::string id = eat_identifier();
+    auto *t = llvm::StructType::create(*llvm_context_, id);
+    (*type_table)[id] = t;
+
+    eat('{');
+    std::vector<llvm::Type *> members;
+    while (!is('}')) {
+        llvm::Type *type = parseType();
+        std::string name = eat_identifier();
+
+        members.push_back(type);
+
+        if (!is(';')) {
+            break;
+        }
+        eat(';');
+    }
+    eat('}');
+    t->setBody(members, true);
 }

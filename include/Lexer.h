@@ -59,7 +59,8 @@ enum Keyword {
     RETURN,
     IF,
     VAR,
-    EXTERN
+    EXTERN,
+    CLASS
 };
 
 enum DeclarationSpecifier {

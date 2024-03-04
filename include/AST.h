@@ -66,6 +66,8 @@ namespace AST {
         std::vector<std::unique_ptr<Function>> functions;
         std::vector<std::unique_ptr<ExternFunction>> prototypes;
 
+        std::map<std::string, llvm::Type *> type_table;
+
         INJECT_ACCEPT();
     };
 

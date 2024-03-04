@@ -135,6 +135,8 @@ TokenType Lexer::getToken() {
             return KEYWORD;
         } else if (identifier_ == "if") {
             keyword_ = IF;
+        } else if(identifier_ == "class") {
+            keyword_ = CLASS;
         } else {
             return IDENTIFIER;
         }

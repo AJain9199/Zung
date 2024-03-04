@@ -1,5 +1,6 @@
 #include <CodeGenerationEngine.h>
 #include <iostream>
+#include <llvm/IRPrinter/IRPrintingPasses.h>
 
 #define STACK_RET(x) stack_return(x); return
 #define STACK_GET(x) (x)(stack_get())
@@ -175,7 +176,7 @@ void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
         it.second->accept(*this);
         auto *val = STACK_GET(Value *);
 
-        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name, val->getType());
+        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name, it.first->type);
         builder_->CreateStore(val, alloca);
         symbol_table_[it.first] = alloca;
     }
@@ -217,14 +218,14 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
     for (auto &i: unit.prototypes) {
         i->accept(*this);
         auto *F = STACK_GET(Function *);
-        F->print(errs());
     }
 
     for (auto &i: unit.functions) {
         i->accept(*this);
         auto *F = STACK_GET(Function *);
-        F->print(errs());
     }
+
+    module_->print(outs(), nullptr);
 }
 
 void CodeGenerationEngine::get_llvm_function(const std::string &name) {

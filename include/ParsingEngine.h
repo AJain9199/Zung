@@ -8,7 +8,7 @@
 
 class ParsingEngine {
 public:
-    explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)) {
+    explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {
         lexer.advance();
     }
 
@@ -21,10 +21,13 @@ public:
 private:
     Lexer lexer;
 
+    std::map<std::string, llvm::Type *> *type_table;
+
     std::unique_ptr<AST::Function> parseFunction();
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
     std::vector<Symbols::SymbolTableEntry *> parseArgList(bool add_to_symtab);
     std::unique_ptr<AST::ExternFunction> parseExtern();
+    void parseClass();
 
 
     llvm::Type *parseType();
