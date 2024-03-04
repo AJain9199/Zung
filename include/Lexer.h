@@ -19,6 +19,8 @@ enum TokenType {
     /* operators */
     OP,
 
+    ELIPSES,
+
     PUNCTUATION,
 
     END

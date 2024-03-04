@@ -157,7 +157,7 @@ void CodeGenerationEngine::visit(const AST::FunctionPrototype &prototype) {
         args[i++] = arg->type;
     }
 
-    FunctionType *FT = FunctionType::get(prototype.return_type, args, false);
+    FunctionType *FT = FunctionType::get(prototype.return_type, args, prototype.var_args);
 
     Function *F = Function::Create(FT, Function::ExternalLinkage, prototype.name, module_.get());
 
@@ -190,7 +190,7 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
     get_llvm_function(expression.callee);
     auto F = STACK_GET(Function *);
 
-    if (F->arg_size() != expression.args.size()) {
+    if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
         throw std::runtime_error("Incorrect number of arguments");
     }
 
@@ -265,7 +265,7 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
         args[i++] = arg;
     }
 
-    FunctionType *FT = FunctionType::get(function.return_type, args, false);
+    FunctionType *FT = FunctionType::get(function.return_type, args, function.is_var_args);
     Function *F = Function::Create(FT, Function::ExternalLinkage, function.name, module_.get());
 
     STACK_RET(F);

@@ -52,8 +52,16 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
     eat(EXTERN);
     std::string id = eat_identifier();
     std::vector<llvm::Type *> args = {};
+    bool va = false;
+
     eat('(');
     while (!is(')')) {
+        if (is(ELIPSES)) {
+            eat(ELIPSES);
+            va = true;
+            break;
+        }
+
         llvm::Type *type = parseType();
         std::string name = eat_identifier();
 
@@ -73,7 +81,7 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
         return_type = llvm::Type::getVoidTy(*llvm_context_);
     }
     eat(';');
-    return std::make_unique<AST::ExternFunction>(id, args, return_type);
+    return std::make_unique<AST::ExternFunction>(id, args, return_type, va);
 }
 
 /* Parses a function definition of the syntax:
@@ -87,8 +95,9 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
     auto *sym = new Symbols::SymbolTable();
     symTab_ = sym;
 
+    bool var_args = false;
 
-    auto args = parseArgList(true);
+    auto args = parseArgList(&var_args);
 
     llvm::Type *return_type;
     if (is(':')) {
@@ -100,13 +109,13 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 
     if (is(';')) {
         eat(';');
-        return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type),
+        return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
                                                nullptr);
     }
 
     auto body = parseCompoundStatement();
 
-    auto func = std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type),
+    auto func = std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
                                                 std::move(body));
     func->symbol_table = sym;
     return func;
@@ -115,17 +124,23 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 /* Parses an argument list for a function definition of the syntax:
  * (type identifier_ (,type identifier_)*)
  * */
-std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool add_to_symtab) {
+std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool *is_var_args) {
     std::vector<Symbols::SymbolTableEntry *> args = {};
 
     eat('(');
     while (!is(')')) {
+        if (is(ELIPSES)) {
+            eat(ELIPSES);
+            if (is_var_args != nullptr) {
+                *is_var_args = true;
+            }
+            break;
+        }
+
         llvm::Type *type = parseType();
         std::string name = eat_identifier();
 
-        if (add_to_symtab) {
-            args.push_back(symTab_->define(type, name, Symbols::LOCAL));
-        }
+        args.push_back(symTab_->define(type, name, Symbols::LOCAL));
 
         if (!is(',')) {
             break;
@@ -198,13 +213,13 @@ llvm::Type *ParsingEngine::parseType() {
         lexer.advance();
         switch (lexer.default_type()) {
             case INT:
-                basic_type =  llvm::Type::getInt32Ty(*llvm_context_);
+                basic_type = llvm::Type::getInt32Ty(*llvm_context_);
                 break;
             case CHAR:
                 basic_type = llvm::Type::getInt8Ty(*llvm_context_);
                 break;
             case VOID:
-                basic_type =  llvm::Type::getVoidTy(*llvm_context_);
+                basic_type = llvm::Type::getVoidTy(*llvm_context_);
                 break;
         }
     } else { // token is an identifier

@@ -4,11 +4,11 @@
 using namespace AST;
 using namespace Symbols;
 
-FunctionPrototype::FunctionPrototype(std::string n, const std::vector<SymbolTableEntry *> &a, llvm::Type *ret) : name(
+FunctionPrototype::FunctionPrototype(std::string n, const std::vector<SymbolTableEntry *> &a, llvm::Type *ret, bool va) : name(
         std::move(n)), args(a),
                                                                                                           return_type(
                                                                                                                   std::move(
-                                                                                                                          ret)) {}
+                                                                                                                          ret)), var_args(va) {}
 
 Function::Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<CompoundStatement> stmt) : prototype(
         std::move(proto)), body(std::move(stmt)) {}

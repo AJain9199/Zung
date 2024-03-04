@@ -79,7 +79,9 @@ namespace AST {
         std::vector<llvm::Type *> args;
         llvm::Type *return_type;
 
-        ExternFunction(std::string name, std::vector<llvm::Type *> args, llvm::Type *return_type): name(std::move(name)), args(std::move(args)), return_type(return_type) {}
+        bool is_var_args = false;
+
+        ExternFunction(std::string name, std::vector<llvm::Type *> args, llvm::Type *return_type, bool va): name(std::move(name)), args(std::move(args)), return_type(return_type), is_var_args(va) {}
 
         INJECT_ACCEPT();
     };
@@ -98,10 +100,11 @@ namespace AST {
 
     class FunctionPrototype : public AbstractNode {
     public:
-        FunctionPrototype(std::string n, const std::vector<Symbols::SymbolTableEntry *> &a, llvm::Type *ret);
+        FunctionPrototype(std::string n, const std::vector<Symbols::SymbolTableEntry *> &a, llvm::Type *ret, bool va);
 
         std::string name;
         std::vector<Symbols::SymbolTableEntry *> args;
+        bool var_args = false;
         llvm::Type *return_type;
 
         INJECT_ACCEPT();

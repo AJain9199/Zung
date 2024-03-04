@@ -19,10 +19,23 @@ TokenType Lexer::getToken() {
         case '(':
         case ')':
         case ',':
-        case '.':
         case ';':
         case ':':
             char_value_ = current_char_;
+            return PUNCTUATION;
+
+        case '.':
+            char_value_ = current_char_;
+            next();
+            if (current_char_ == '.') {
+                next();
+                if (current_char_ == '.') {
+                    char_value_ = (char) 0;
+                    return ELIPSES;
+                }
+                rewind();
+            }
+            rewind();
             return PUNCTUATION;
 
         case '=':
