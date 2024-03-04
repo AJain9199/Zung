@@ -41,7 +41,9 @@ void PrintVisitor::visit(const AST::FunctionPrototype &prototype) {
 
     for (auto &j : prototype.args) {
         INDENT();
-        std::cout << j->name << " : " << std::get<enum DefaultType>(j->type.type) << std::endl;
+        std::cout << j->name << " : ";
+        j->type->print(llvm::errs());
+        std::cout << std::endl;
     }
     tab_level--;
 }

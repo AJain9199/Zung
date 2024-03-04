@@ -42,46 +42,73 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
     expression.RHS->accept(*this);
     auto RHS = STACK_GET(Value *);
 
+    Instruction::BinaryOps binop;
+    ICmpInst::Predicate icmp;
+
     switch (expression.op) {
         case ADD:
-        STACK_RET(builder_->CreateAdd(LHS, RHS, "addtmp"));
+            binop = Instruction::Add;
+            goto binary_ops;
         case SUB:
-        STACK_RET(builder_->CreateSub(LHS, RHS, "subtmp"));
+            binop = Instruction::Sub;
+            goto binary_ops;
         case MUL:
-        STACK_RET(builder_->CreateMul(LHS, RHS, "multmp"));
+            binop = Instruction::Mul;
+            goto binary_ops;
         case DIV:
-        STACK_RET(builder_->CreateSDiv(LHS, RHS, "divtmp"));
+            binop = Instruction::SDiv;
+            goto binary_ops;
         case MOD:
-        STACK_RET(builder_->CreateSRem(LHS, RHS, "modtmp"));
+            binop = Instruction::SRem;
+            goto binary_ops;
         case RSH:
-        STACK_RET(builder_->CreateLShr(LHS, RHS, "rshtmp"));
+            binop = Instruction::LShr;
+            goto binary_ops;
         case LSH:
-        STACK_RET(builder_->CreateShl(LHS, RHS, "lshtmp"));
+            binop = Instruction::Shl;
+            goto binary_ops;
         case AND:
-        STACK_RET(builder_->CreateAnd(LHS, RHS, "andtmp"));
+            binop = Instruction::And;
+            goto binary_ops;
         case OR:
-        STACK_RET(builder_->CreateOr(LHS, RHS, "ortmp"));
+            binop = Instruction::Or;
+            goto binary_ops;
         case XOR:
-        STACK_RET(builder_->CreateXor(LHS, RHS, "xortmp"));
+            binop = Instruction::Xor;
+            goto binary_ops;
         case LOGICAL_AND:
-        STACK_RET(builder_->CreateAnd(i1(LHS), i1(RHS), "andtmp"));
+            binop = Instruction::And;
+            goto rel_ops;
         case LOGICAL_OR:
-        STACK_RET(builder_->CreateOr(i1(LHS), i1(RHS), "ortmp"));
-        case GE:
-        STACK_RET(builder_->CreateICmpSGT(LHS, RHS, "gttmp"));
-        case LE:
-        STACK_RET(builder_->CreateICmpSLT(LHS, RHS, "gttmp"));
-        case GEQ:
-        STACK_RET(builder_->CreateICmpSGE(LHS, RHS, "gttmp"));
-        case LEQ:
-        STACK_RET(builder_->CreateICmpSLE(LHS, RHS, "gttmp"));
-        case EQ:
-        STACK_RET(builder_->CreateICmpEQ(LHS, RHS, "gttmp"));
+            binop = Instruction::Or;
+            goto rel_ops;
+        case EQ_EQ:
+            icmp = ICmpInst::ICMP_EQ;
+            goto cmp_ops;
         case NEQ:
-        STACK_RET(builder_->CreateICmpNE(LHS, RHS, "gttmp"));
+            icmp = ICmpInst::ICMP_NE;
+            goto cmp_ops;
+        case GE:
+            icmp = ICmpInst::ICMP_SGT;
+            goto cmp_ops;
+        case GEQ:
+            icmp = llvm::CmpInst::ICMP_SGE;
+            goto cmp_ops;
+        case LE:
+            icmp = ICmpInst::ICMP_SLT;
+            goto cmp_ops;
+        case LEQ:
+            icmp = ICmpInst::ICMP_SLE;
+            goto cmp_ops;
         default:
             throw std::runtime_error("Not implemented yet");
     }
+binary_ops:
+        STACK_RET(builder_->CreateBinOp(binop, LHS, RHS, "tmp"));
+rel_ops:
+        STACK_RET(builder_->CreateLogicalOp(binop, LHS, RHS, "tmp"));
+cmp_ops:
+        STACK_RET(builder_->CreateCmp(icmp, LHS, RHS, "tmp"));
 }
 
 void CodeGenerationEngine::visit(const AST::Function &function) {

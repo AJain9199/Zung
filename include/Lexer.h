@@ -47,8 +47,9 @@ enum Operator {
     GEQ = '>' + '=', // 123
     LE = '<',
     LEQ = '<' + '=', // 121
-    NEQ,
+    NEQ = '!' + '=' + 1, // 33 + 61
 };
+// TODO: Token detection overhaul
 
 enum Keyword {
     FN,

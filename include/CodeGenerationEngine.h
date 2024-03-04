@@ -30,13 +30,11 @@ private:
     std::map<Symbols::SymbolTableEntry *, llvm::AllocaInst *> symbol_table_;
     func_table_t function_table_;
 
-    llvm::Type *get_llvm_type(const Symbols::Type &type);
-    llvm::Type *get_llvm_type(const Symbols::BasicType &type);
     void get_llvm_function(const std::string &name);
     static llvm::AllocaInst *create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type);
 
 public:
-    CodeGenerationEngine() : llvm_context_(std::make_unique<llvm::LLVMContext>()),
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context) : llvm_context_(std::move(context)),
                              builder_(std::make_unique<llvm::IRBuilder<>>(*llvm_context_)),
                              module_(std::make_unique<llvm::Module>("main", *llvm_context_)) {}
 
