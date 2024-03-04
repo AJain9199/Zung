@@ -403,9 +403,11 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_expression_statement() {
  * parenthesized_expression
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
-    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION)) {
+    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL)) {
         case NUMERIC_LITERAL:
             return parseNumericLiteralExpression();
+        case STR_LITERAL:
+            return parseStringLiteralExpression();
         case IDENTIFIER:
             return parseIdentifierExpression();
         case PUNCTUATION:
@@ -515,4 +517,15 @@ void ParsingEngine::parseClass() {
     }
     eat('}');
     t->setBody(members, packed);
+}
+
+std::unique_ptr<AST::Expression> ParsingEngine::parseStringLiteralExpression() {
+    if (is(STR_LITERAL)) {
+        std::string str = lexer.identifier();
+        lexer.advance();
+        return std::make_unique<AST::StringLiteralExpression>(str);
+    } else {
+        std::cerr << "Unexpected token" << std::endl;
+        return nullptr;
+    }
 }

@@ -270,3 +270,7 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
 
     STACK_RET(F);
 }
+
+void CodeGenerationEngine::visit(const AST::StringLiteralExpression &expression) {
+    STACK_RET(builder_->CreateGlobalStringPtr(expression.val));
+}

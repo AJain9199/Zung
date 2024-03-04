@@ -39,6 +39,7 @@ private:
     std::unique_ptr<AST::Expression> parseUnaryExpression();
     std::unique_ptr<AST::Expression> parsePrimaryExpression();
     std::unique_ptr<AST::Expression> parseBinaryExpression(unsigned int min_precedence, std::unique_ptr<AST::Expression> LHS);
+    std::unique_ptr<AST::Expression> parseStringLiteralExpression();
     std::unique_ptr<AST::Expression> parseExpression();
 
     /* Parsing statements */

@@ -95,8 +95,18 @@ TokenType Lexer::getToken() {
         case ' ':
             next();
             break;
+
+        case '"':
+            next();
+            identifier_ = "";
+            while (current_char_ != '"') {
+                identifier_ += current_char_;
+                next();
+            }
+            return STR_LITERAL;
         case EOF:
             return END;
+
     }
 
     if (isalpha(current_char_) || current_char_ == '_') {

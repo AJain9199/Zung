@@ -34,6 +34,7 @@ namespace AST {
     class BinaryExpression;
     class UnaryExpression;
     class NumericConstantExpression;
+    class StringLiteralExpression;
 
     class ASTVisitor {
     public:
@@ -50,6 +51,7 @@ namespace AST {
         virtual void visit(const AST::VariableExpression &) = 0;
         virtual void visit(const AST::FunctionCallExpression &) = 0;
         virtual void visit(const AST::NumericConstantExpression &) = 0;
+        virtual void visit(const AST::StringLiteralExpression &) = 0;
         virtual void visit(const AST::TranslationUnit &) = 0;
         virtual void visit(const AST::ExternFunction &) = 0;
     };
@@ -205,6 +207,15 @@ namespace AST {
 
         Operator op;
         std::unique_ptr<Expression> Operand;
+
+        INJECT_ACCEPT();
+    };
+
+    class StringLiteralExpression : public Expression {
+    public:
+        explicit StringLiteralExpression(std::string s) : val(s) {};
+
+        std::string val;
 
         INJECT_ACCEPT();
     };

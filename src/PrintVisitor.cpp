@@ -148,3 +148,10 @@ void PrintVisitor::visit(const AST::ExternFunction &) {
     std::cout << "Extern Function" << std::endl;
     tab_level--;
 }
+
+void PrintVisitor::visit(const AST::StringLiteralExpression &) {
+    tab_level++;
+    INDENT();
+    std::cout << "String Literal Expression" << std::endl;
+    tab_level--;
+}

@@ -23,6 +23,7 @@ public:
     void visit(const AST::UnaryExpression &) override;
     void visit(const AST::NumericConstantExpression &) override;
     void visit(const AST::ExternFunction &) override;
+    void visit(const AST::StringLiteralExpression &) override;
 };
 
 #endif //ZUNG_PRINTVISITOR_H
