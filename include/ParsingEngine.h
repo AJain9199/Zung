@@ -14,6 +14,10 @@ public:
 
     /* parsing methods for constructing the AST */
     AST::TranslationUnit *parseTranslationUnit();
+
+    void get_context(std::unique_ptr<llvm::LLVMContext> &context) {
+        context = std::move(llvm_context_);
+    }
 private:
     Lexer lexer;
 

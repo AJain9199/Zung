@@ -62,9 +62,12 @@ void PrintVisitor::visit(const AST::DeclarationStatement &stmt) {
     tab_level++;
     INDENT();
     std::cout << "Declaration Statement: " << std::endl;
+
     for (const auto & it : stmt.init_list) {
         INDENT();
-        std::cout << it.first->name << " = " << std::endl;
+        std::cout << it.first->name << " = ";
+        it.first->type->print(llvm::errs());
+        std::cout << std::endl;
         it.second->accept(*this);
     }
     tab_level--;

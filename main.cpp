@@ -10,6 +10,8 @@ int main() {
     PrintVisitor pv;
     p->accept(pv);
 
+    parse.get_context(context);
+
     CodeGenerationEngine cge(std::move(context));
     p->accept(cge);
 }

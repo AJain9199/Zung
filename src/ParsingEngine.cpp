@@ -3,6 +3,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include <iostream>
+#include <regex>
 
 std::map<enum Operator, int> ParsingEngine::precedence = {
         {EQ,          1},
@@ -184,6 +185,8 @@ auto ParsingEngine::is(Tokens... tokens) {
 }
 
 llvm::Type *ParsingEngine::parseType() {
+    static std::regex type_regex("i(\\d+)");
+
     if (is(IDENTIFIER, DEFAULT_TYPE) == DEFAULT_TYPE) {
         lexer.advance();
         switch (lexer.default_type()) {
@@ -194,7 +197,14 @@ llvm::Type *ParsingEngine::parseType() {
             case VOID:
                 return llvm::Type::getVoidTy(*llvm_context_);
         }
+    } else { // token is an identifier
+        std::string id = eat_identifier();
+        if (std::regex_match(id, type_regex)) {
+            int width = std::stoi(id.substr(1));
+            return llvm::Type::getIntNTy(*llvm_context_, width);
+        }
     }
+    return nullptr;
 }
 
 void ParsingEngine::eat(enum Keyword K) {

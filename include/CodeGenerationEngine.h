@@ -77,6 +77,10 @@ public:
         stack_.pop();
         return val;
     }
+
+    void get_context(std::unique_ptr<llvm::LLVMContext> &context) {
+        context = std::move(llvm_context_);
+    }
 };
 
 #endif //ZUNG_CODEGENERATIONENGINE_H
