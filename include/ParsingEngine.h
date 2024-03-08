@@ -14,6 +14,7 @@ struct TypeInfo {
 class ParsingEngine {
 public:
     explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {
+        type_table = new std::map<std::string, struct TypeInfo>();
         lexer.advance();
     }
 
@@ -26,7 +27,7 @@ public:
 private:
     Lexer lexer;
 
-    std::map<std::string, TypeInfo> *type_table;
+    std::map<std::string, struct TypeInfo> *type_table;
 
     std::unique_ptr<AST::Function> parseFunction();
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();

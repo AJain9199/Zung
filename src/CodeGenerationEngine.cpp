@@ -104,12 +104,12 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
         default:
             throw std::runtime_error("Not implemented yet");
     }
-binary_ops:
-        STACK_RET(builder_->CreateBinOp(binop, LHS, RHS, "tmp"));
-rel_ops:
-        STACK_RET(builder_->CreateLogicalOp(binop, LHS, RHS, "tmp"));
-cmp_ops:
-        STACK_RET(builder_->CreateCmp(icmp, LHS, RHS, "tmp"));
+    binary_ops:
+STACK_RET(builder_->CreateBinOp(binop, LHS, RHS, "tmp"));
+    rel_ops:
+STACK_RET(builder_->CreateLogicalOp(binop, LHS, RHS, "tmp"));
+    cmp_ops:
+STACK_RET(builder_->CreateCmp(icmp, LHS, RHS, "tmp"));
 }
 
 void CodeGenerationEngine::visit(const AST::Function &function) {
@@ -253,6 +253,14 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
     switch (expression.op) {
         case SUB:
         STACK_RET(builder_->CreateNeg(val));
+        case MUL:
+        STACK_RET(builder_->CreateLoad(val->getType(), val));
+        case AND: {
+            auto var = create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "",
+                                                 val->getType()->getPointerTo());
+            builder_->CreateStore(val, var);
+            STACK_RET(var);
+        }
         default:
             throw std::runtime_error("Not implemented yet");
     }

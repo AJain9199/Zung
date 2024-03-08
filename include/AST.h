@@ -11,6 +11,8 @@
 
 #define INJECT_ACCEPT() void accept(ASTVisitor &v) override { v.visit(*this); }
 
+struct TypeInfo;
+
 namespace AST {
     class ASTVisitor;
 
@@ -68,7 +70,7 @@ namespace AST {
         std::vector<std::unique_ptr<Function>> functions;
         std::vector<std::unique_ptr<ExternFunction>> prototypes;
 
-        std::map<std::string, llvm::Type *> type_table;
+        std::map<std::string, struct TypeInfo> type_table;
 
         INJECT_ACCEPT();
     };

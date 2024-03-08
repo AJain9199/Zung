@@ -31,7 +31,6 @@ std::map<enum Operator, int> ParsingEngine::precedence = {
 
 AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
     auto *translation_unit = new AST::TranslationUnit();
-    type_table = &translation_unit->type_table;
     while (lexer.hasMoreTokens()) {
         if (is(FN)) {
             auto f = parseFunction();
@@ -39,12 +38,13 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
         } else if (is(EXTERN)) {
             auto f = parseExtern();
             translation_unit->prototypes.push_back(std::move(f));
-        } else if (is(CLASS)) {
+        } else if (is(STRUCT)) {
             parseStruct();
         } else {
             std::cerr << "Unexpected token" << std::endl;
         }
     }
+    translation_unit->type_table = *type_table;
     return translation_unit;
 }
 
@@ -228,7 +228,7 @@ llvm::Type *ParsingEngine::parseType() {
             int width = std::stoi(id.substr(1));
             basic_type = llvm::Type::getIntNTy(*llvm_context_, width);
         } else {
-            basic_type = (*type_table)[id];
+            basic_type = (*type_table)[id].type;
         }
     }
 
@@ -509,7 +509,7 @@ void ParsingEngine::parseStruct() {
     eat(STRUCT);
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);
-    (*type_table)[id] = {t, {}};
+    (*type_table)[id] = (struct TypeInfo){t, {}};
     bool packed = false;
 
     if (is(PACKED)) {
