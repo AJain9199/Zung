@@ -40,7 +40,7 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
             auto f = parseExtern();
             translation_unit->prototypes.push_back(std::move(f));
         } else if (is(CLASS)) {
-            parseClass();
+            parseStruct();
         } else {
             std::cerr << "Unexpected token" << std::endl;
         }
@@ -505,11 +505,11 @@ bool ParsingEngine::is(enum Operator op) {
     return lexer.get() == OP && lexer.operator_token() == op;
 }
 
-void ParsingEngine::parseClass() {
-    eat(CLASS);
+void ParsingEngine::parseStruct() {
+    eat(STRUCT);
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);
-    (*type_table)[id] = t;
+    (*type_table)[id] = {t, {}};
     bool packed = false;
 
     if (is(PACKED)) {
@@ -519,10 +519,11 @@ void ParsingEngine::parseClass() {
 
     eat('{');
     std::vector<llvm::Type *> members;
+    int i = 0;
     while (!is('}')) {
         llvm::Type *type = parseType();
         std::string name = eat_identifier();
-
+        (*type_table)[id].fields[name] = i++;
         members.push_back(type);
 
         if (!is(';')) {

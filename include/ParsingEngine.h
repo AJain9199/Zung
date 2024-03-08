@@ -6,6 +6,11 @@
 #include <llvm/IR/Type.h>
 #include "llvm/IR/LLVMContext.h"
 
+struct TypeInfo {
+    llvm::Type *type;
+    std::map<std::string, int> fields;
+};
+
 class ParsingEngine {
 public:
     explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {
@@ -21,13 +26,13 @@ public:
 private:
     Lexer lexer;
 
-    std::map<std::string, llvm::Type *> *type_table;
+    std::map<std::string, TypeInfo> *type_table;
 
     std::unique_ptr<AST::Function> parseFunction();
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
     std::vector<Symbols::SymbolTableEntry *> parseArgList(bool *is_var_args=nullptr);
     std::unique_ptr<AST::ExternFunction> parseExtern();
-    void parseClass();
+    void parseStruct();
 
 
     llvm::Type *parseType();
