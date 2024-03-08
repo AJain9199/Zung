@@ -99,6 +99,7 @@ TokenType Lexer::getToken() {
         case '!':
         case '+':
         case '-':
+        case '&':
             operator_ = (Operator) (operator_ + current_char_);
             return OP;
 
