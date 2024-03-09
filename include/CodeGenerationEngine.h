@@ -16,10 +16,22 @@
 #include <stack>
 #include <any>
 
+/*
+ * macro to define the return type of the visitor subroutines.
+ * It only defines the return type, which would be put onto the internal stack. The "actual" return type for the vitisor
+ * methods are all void.
+ * */
 #define RETURNS(x) void
 
 typedef std::map<std::string, std::unique_ptr<AST::FunctionPrototype>> func_table_t;
 
+/*
+ * The code generation engine is responsible for generating LLVM IR from the AST. It uses the visitor pattern to traverse
+ * the Abstract Syntax Tree, and generates the corresponding LLVM IR for each node.
+ *
+ * The engine uses an internal stack to store the results of the code generation process. This is necessary because the
+ * visitor does not have return types for the visitor subroutines.
+ */
 class CodeGenerationEngine : public AST::ASTVisitor {
 private:
     std::stack<void *> stack_; /* TODO: Use a variant instead later in development */
@@ -46,6 +58,8 @@ public:
 
     RETURNS(llvm::Function *) visit(const AST::FunctionPrototype &) override;
 
+    void visit(const AST::ExternFunction &) override;
+
     void visit(const AST::CompoundStatement &) override;
 
     void visit(const AST::DeclarationStatement &) override;
@@ -56,34 +70,39 @@ public:
 
     void visit(const AST::ArrayIndexingExpression &) override {};
 
-    void visit(const AST::FunctionCallExpression &) override;
+    RETURNS(Value *) visit(const AST::FunctionCallExpression &) override;
 
-    void visit(const AST::VariableExpression &) override;
+    RETURNS(llvm::AllocaInst*) visit(const AST::VariableExpression &) override;
 
-    void visit(const AST::BinaryExpression &) override;
+    RETURNS(Value *) visit(const AST::BinaryExpression &) override;
 
-    void visit(const AST::UnaryExpression &) override;
+    RETURNS(Value *) visit(const AST::UnaryExpression &) override;
 
-    void visit(const AST::NumericConstantExpression &) override;
+    RETURNS(llvm::ConstantInt *) visit(const AST::NumericConstantExpression &) override;
 
-    void visit(const AST::ExternFunction &) override;
+    RETURNS(llvm::Constant *) visit(const AST::StringLiteralExpression &) override;
 
-    void visit(const AST::StringLiteralExpression &) override;
+    RETURNS(llvm::ConstantFP *) visit(const AST::FloatLiteralExpression &) override;
 
-    void visit(const AST::FloatLiteralExpression &) override;
-
+    /* The following methods are used to manage the internal stack of the code generation engine. */
+    /*
+     * "returns" a value to the stack, by pushing onto it.
+     * @param val: the value to be pushed onto the stack
+     */
     inline void stack_return(void * val) {
         stack_.push(val);
     }
 
+    /*
+     * "pops" a value from the stack, by returning the top value and removing it from the stack.
+     * Should only be used with the STACK_GET macro
+     *
+     * @return: the top value from the stack
+     */
     inline void *stack_get() {
         auto val = stack_.top();
         stack_.pop();
         return val;
-    }
-
-    void get_context(std::unique_ptr<llvm::LLVMContext> &context) {
-        context = std::move(llvm_context_);
     }
 };
 

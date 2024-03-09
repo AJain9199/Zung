@@ -113,7 +113,7 @@ void PrintVisitor::visit(const AST::UnaryExpression &expression) {
     std::cout << "Unary Expression" << std::endl;
     INDENT();
     std::cout << "Operator: " << (char)expression.op << std::endl;
-    expression.Operand->accept(*this);
+    expression.operand->accept(*this);
     tab_level--;
 }
 

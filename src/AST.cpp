@@ -11,7 +11,7 @@ FunctionPrototype::FunctionPrototype(std::string n, const std::vector<SymbolTabl
 Function::Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<CompoundStatement> stmt) : prototype(
         std::move(proto)), body(std::move(stmt)) {}
 
-UnaryExpression::UnaryExpression(Operator o, std::unique_ptr<Expression> op) : op(o), Operand(std::move(op)) {}
+UnaryExpression::UnaryExpression(Operator o, std::unique_ptr<Expression> op) : op(o), operand(std::move(op)) {}
 
 BinaryExpression::BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs) : LHS(
         std::move(lhs)), op(o), RHS(std::move(rhs)) {}

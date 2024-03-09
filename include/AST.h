@@ -299,12 +299,12 @@ namespace AST {
         UnaryExpression(Operator o, std::unique_ptr<Expression> op);
 
         Operator op;
-        std::unique_ptr<Expression> Operand;
+        std::unique_ptr<Expression> operand;
 
         INJECT_ACCEPT();
 
         llvm::Type *type(llvm::LLVMContext *context) override {
-            auto optype = Operand->type(context);
+            auto optype = operand->type(context);
 
             if (op == Operator::AND) {
                 return optype->getPointerTo();

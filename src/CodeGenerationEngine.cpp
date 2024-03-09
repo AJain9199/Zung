@@ -253,7 +253,7 @@ CodeGenerationEngine::create_entry_block_alloca(llvm::Function *func, const std:
 }
 
 void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
-    expression.Operand->accept(*this);
+    expression.operand->accept(*this);
     auto *val = STACK_GET(Value *);
     switch (expression.op) {
         case SUB:
@@ -261,8 +261,8 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
         case MUL:
         STACK_RET(builder_->CreateLoad(val->getType(), val));
         case AND: {
-            if (dynamic_cast<AST::VariableExpression *>(expression.Operand.get()) != nullptr) {
-                STACK_RET(symbol_table_[dynamic_cast<AST::VariableExpression *>(expression.Operand.get())->variable]);
+            if (dynamic_cast<AST::VariableExpression *>(expression.operand.get()) != nullptr) {
+                STACK_RET(symbol_table_[dynamic_cast<AST::VariableExpression *>(expression.operand.get())->variable]);
             }
 
             auto var = create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "",
