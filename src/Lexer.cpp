@@ -114,8 +114,22 @@ TokenType Lexer::getToken() {
             next();
             identifier_ = "";
             while (current_char_ != '"') {
-                identifier_ += current_char_;
-                next();
+                if (current_char_ == '\\') {
+                    next();
+                    switch (current_char_) {
+                        case 'n':
+                            identifier_ += '\n';
+                            break;
+                        case 't':
+                            identifier_ += '\t';
+                            break;
+                    }
+                    next();
+                    continue;
+                } else {
+                    identifier_ += current_char_;
+                    next();
+                }
             }
             return STR_LITERAL;
         case EOF:
