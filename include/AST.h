@@ -16,65 +16,106 @@
 
 struct TypeInfo;
 
-template<typename T, typename ...Tokens>
-static bool in(T token, T first, Tokens... tokens) {
-    return ((token == first) || in(token, tokens...));
-}
-
+/*
+ * Contains all the AST nodes and the abstract visitor class.
+ */
 namespace AST {
     class ASTVisitor;
 
     class AbstractNode;
+
     class ExternFunction;
+
     class TranslationUnit;
+
     class Function;
+
     class FunctionPrototype;
 
     class Statement; /* Base statement */
     class CompoundStatement;
+
     class DeclarationStatement;
+
     class ExpressionStatement;
+
     class IfStatement;
 
     class Expression; /* Base expression */
     class AssignableExpression;
+
     class ArrayIndexingExpression;
+
     class FunctionCallExpression;
+
     class VariableExpression;
+
     class BinaryExpression;
+
     class UnaryExpression;
-    class NumericConstantExpression;
+
+    class IntegralLiteralExpression;
+
     class StringLiteralExpression;
+
     class FloatLiteralExpression;
 
+    /*
+     * The visitor class for the AST.
+     * Each method in the visitor class corresponds to a node in the AST.
+     *
+     * Implementation details: each AST node must have an accept method. The accept method of the AST nodes may not call
+     * the accept methods of its children. This is the responsibility of the visitor.
+     */
     class ASTVisitor {
     public:
         virtual void visit(const AST::AbstractNode &) = 0;
+
         virtual void visit(const AST::Function &) = 0;
+
         virtual void visit(const AST::FunctionPrototype &) = 0;
+
         virtual void visit(const AST::CompoundStatement &) = 0;
+
         virtual void visit(const AST::DeclarationStatement &) = 0;
+
         virtual void visit(const AST::ExpressionStatement &) = 0;
+
         virtual void visit(const AST::IfStatement &) = 0;
+
         virtual void visit(const AST::ArrayIndexingExpression &) = 0;
+
         virtual void visit(const AST::BinaryExpression &) = 0;
+
         virtual void visit(const AST::UnaryExpression &) = 0;
+
         virtual void visit(const AST::VariableExpression &) = 0;
+
         virtual void visit(const AST::FunctionCallExpression &) = 0;
-        virtual void visit(const AST::NumericConstantExpression &) = 0;
+
+        virtual void visit(const AST::IntegralLiteralExpression &) = 0;
+
         virtual void visit(const AST::StringLiteralExpression &) = 0;
+
         virtual void visit(const AST::TranslationUnit &) = 0;
+
         virtual void visit(const AST::ExternFunction &) = 0;
+
         virtual void visit(const AST::FloatLiteralExpression &) = 0;
     };
 
+    /* Base class for all AST nodes */
     class AbstractNode {
     public:
         virtual ~AbstractNode() = default;
 
-        virtual void accept(ASTVisitor &v)  = 0;
+        virtual void accept(ASTVisitor &v) = 0;
     };
 
+    /*
+     * Stores the translation unit, which is the source file as of writing.
+     * The source file may contain multiple functions and prototypes (both extern and local) and structures.
+     */
     class TranslationUnit : public AbstractNode {
     public:
         std::vector<std::unique_ptr<Function>> functions;
@@ -85,6 +126,9 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * Stores the function prototype, for an extern function. Should be linked with the translation unit.
+     */
     class ExternFunction : public AbstractNode {
     public:
         std::string name;
@@ -93,11 +137,16 @@ namespace AST {
 
         bool is_var_args = false;
 
-        ExternFunction(std::string name, std::vector<llvm::Type *> args, llvm::Type *return_type, bool va): name(std::move(name)), args(std::move(args)), return_type(return_type), is_var_args(va) {}
+        ExternFunction(std::string name, std::vector<llvm::Type *> args, llvm::Type *return_type, bool va) : name(
+                std::move(name)), args(std::move(args)), return_type(return_type), is_var_args(va) {}
 
         INJECT_ACCEPT();
     };
 
+    /*
+     * Stores the function, which is the main unit of execution in the source file.  It may or may not include the function body
+     * (in the case of a prototype).
+     */
     class Function : public AbstractNode {
     public:
         Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<CompoundStatement> stmt);
@@ -110,6 +159,10 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * Represents the function signature
+     * name(args) : return_type
+     */
     class FunctionPrototype : public AbstractNode {
     public:
         FunctionPrototype(std::string n, const std::vector<Symbols::SymbolTableEntry *> &a, llvm::Type *ret, bool va);
@@ -122,6 +175,10 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * The base statement class.
+     * Children: CompoundStatement, DeclarationStatement, ExpressionStatement, IfStatement
+     */
     class Statement : public AbstractNode {
     public:
         ~Statement() override = default;
@@ -129,6 +186,9 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * A collection of statements.
+     */
     class CompoundStatement : public Statement {
     public:
         explicit CompoundStatement(std::vector<std::unique_ptr<Statement>> stmts);
@@ -138,8 +198,10 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * A declaration statement. Multiple variables may be declared, with different types and initial values.
+     */
     class DeclarationStatement : public Statement {
-
     public:
         explicit DeclarationStatement(std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression>> i_list);
 
@@ -148,6 +210,9 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * An expression statement. It may be any kind of expression, including function calls, assignments, etc.
+     */
     class ExpressionStatement : public Statement {
     public:
         explicit ExpressionStatement(std::unique_ptr<Expression> e);
@@ -157,22 +222,38 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
+    /*
+     * An if statement. It may or may not have an else clause.
+     */
     class IfStatement : public Statement {
     public:
         std::unique_ptr<Expression> condition;
         std::unique_ptr<CompoundStatement> then;
+
         IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> t);
     };
 
+    /*
+     * Base class for all expressions.
+     * Children: FloatLiteralExpression, IntegralLiteralExpression, VariableExpression, FunctionCallExpression, ArrayIndexingExpression, BinaryExpression, UnaryExpression, StringLiteralExpression
+     */
     class Expression : public AbstractNode {
     public:
-        virtual llvm::Type *type(llvm::LLVMContext *) =  0;
+        virtual llvm::Type *type(llvm::LLVMContext *) = 0;
     };
+
+    /*
+     * Base class for all assignable expressions.
+     * Children: VariableExpression, ArrayIndexingExpression
+     */
     class AssignableExpression : public Expression {
     public:
         llvm::Type *type(llvm::LLVMContext *) override = 0;
     };
 
+    /*
+     * A floating point literal expression.
+     */
     class FloatLiteralExpression : public Expression {
     public:
         explicit FloatLiteralExpression(double v) : val(v) {};
@@ -186,9 +267,12 @@ namespace AST {
         };
     };
 
-    class NumericConstantExpression : public Expression {
+    /*
+     * A numeric constant expression.
+     */
+    class IntegralLiteralExpression : public Expression {
     public:
-        explicit NumericConstantExpression(int v);
+        explicit IntegralLiteralExpression(int v);
 
         int val;
 
@@ -199,6 +283,9 @@ namespace AST {
         };
     };
 
+    /*
+     * A variable expression. It may be a local variable, a global variable, or a function argument.
+     */
     class VariableExpression : public AssignableExpression {
     public:
         explicit VariableExpression(Symbols::SymbolTableEntry *var);
@@ -212,6 +299,9 @@ namespace AST {
         };
     };
 
+    /*
+     * A function call expression. It may or may not have arguments.
+     */
     class FunctionCallExpression : public Expression {
     public:
         FunctionCallExpression(std::string name, std::vector<std::unique_ptr<Expression>> a);
@@ -226,6 +316,9 @@ namespace AST {
         };
     };
 
+    /*
+     * An array indexing expression. It can have multiple indices.
+     */
     class ArrayIndexingExpression : public AssignableExpression {
     public:
         ArrayIndexingExpression(std::unique_ptr<VariableExpression> arr, std::vector<std::unique_ptr<Expression>> idx);
@@ -240,6 +333,9 @@ namespace AST {
         };
     };
 
+    /*
+     * An expression with a left-hand side, an operator, and a right-hand side.
+     */
     class BinaryExpression : public Expression {
     public:
         BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs);
@@ -250,7 +346,7 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type * type(llvm::LLVMContext *context) override {
+        llvm::Type *type(llvm::LLVMContext *context) override {
             auto ltype = LHS->type(context);
             auto rtype = RHS->type(context);
 
@@ -267,9 +363,10 @@ namespace AST {
             }
 
             if (ltype->isIntegerTy()) {
-                if (op == Operator::ADD || op == Operator::SUB || op == Operator::MUL || op == Operator::FLR || op == Operator::MOD) {
+                if (op == Operator::ADD || op == Operator::SUB || op == Operator::MUL || op == Operator::FLR ||
+                    op == Operator::MOD) {
                     if (rtype->isIntegerTy()) {
-                        return rtype->getIntegerBitWidth() > ltype ->getIntegerBitWidth() ? rtype : ltype;
+                        return rtype->getIntegerBitWidth() > ltype->getIntegerBitWidth() ? rtype : ltype;
                     } else if (rtype->isFloatTy()) {
                         return rtype;
                     }
@@ -282,7 +379,8 @@ namespace AST {
                 return ltype;
             }
 
-            if (op == Operator::EQ || op == Operator::NEQ || op == Operator::LE || op == Operator::GE || op == Operator::LEQ || op == Operator::GEQ) {
+            if (op == Operator::EQ || op == Operator::NEQ || op == Operator::LE || op == Operator::GE ||
+                op == Operator::LEQ || op == Operator::GEQ) {
                 return llvm::Type::getInt1Ty(*context);
             }
 
@@ -294,6 +392,9 @@ namespace AST {
         }
     };
 
+    /*
+     * A unary expression with an operator and an operand.
+     */
     class UnaryExpression : public Expression {
     public:
         UnaryExpression(Operator o, std::unique_ptr<Expression> op);
@@ -325,9 +426,12 @@ namespace AST {
         };
     };
 
+    /*
+     * A string literal expression. Represents a char*.
+     */
     class StringLiteralExpression : public Expression {
     public:
-        explicit StringLiteralExpression(std::string s) : val(s) {};
+        explicit StringLiteralExpression(std::string s) : val(std::move(s)) {};
 
         std::string val;
 

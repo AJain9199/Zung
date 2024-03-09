@@ -316,7 +316,7 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseNumericLiteralExpression() 
     if (is(NUMERIC_LITERAL)) {
         int val = lexer.numeric_literal();
         lexer.advance();
-        return std::make_unique<AST::NumericConstantExpression>(val);
+        return std::make_unique<AST::IntegralLiteralExpression>(val);
     } else {
         std::cerr << "Unexpected token" << std::endl;
         return nullptr;

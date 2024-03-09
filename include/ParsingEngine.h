@@ -6,11 +6,20 @@
 #include <llvm/IR/Type.h>
 #include "llvm/IR/LLVMContext.h"
 
+/*
+ * Stores information about the structural aggregate types.
+ */
 struct TypeInfo {
     llvm::Type *type;
     std::map<std::string, int> fields;
 };
 
+/*
+ * The parsing engine is responsible for parsing the input file and constructing the Abstract Syntax Tree (AST) from the
+ * input. It uses the lexer to get tokens from the input file.
+ *
+ * All AST nodes are constructed by the parseXXX methods.
+ */
 class ParsingEngine {
 public:
     explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {

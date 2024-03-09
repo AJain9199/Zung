@@ -117,7 +117,7 @@ void PrintVisitor::visit(const AST::UnaryExpression &expression) {
     tab_level--;
 }
 
-void PrintVisitor::visit(const AST::NumericConstantExpression &expression) {
+void PrintVisitor::visit(const AST::IntegralLiteralExpression &expression) {
     tab_level++;
     INDENT();
     std::cout << "Numeric Constant Expression: " << expression.val << std::endl;

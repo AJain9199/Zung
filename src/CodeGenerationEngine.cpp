@@ -3,13 +3,11 @@
 #include <llvm/IRPrinter/IRPrintingPasses.h>
 
 #define STACK_RET(x) stack_return(x); return
-#define STACK_GET(x) (x)(stack_get())
-
-#define i1(x) builder_->CreateTrunc(x, Type::getInt1Ty(*llvm_context_))
+#define STACK_GET(x) (stack_get<x>())
 
 using namespace llvm;
 
-void CodeGenerationEngine::visit(const AST::NumericConstantExpression &expression) {
+void CodeGenerationEngine::visit(const AST::IntegralLiteralExpression &expression) {
     STACK_RET(ConstantInt::get(*llvm_context_, APInt(32, expression.val, true)));
 }
 
@@ -221,13 +219,14 @@ void CodeGenerationEngine::visit(const AST::CompoundStatement &statement) {
 void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
     for (auto &i: unit.prototypes) {
         i->accept(*this);
-        auto *F = STACK_GET(Function *);
+        STACK_GET(Function *); // don't pollute stack, returns are always popped off the stack
     }
 
     for (auto &i: unit.functions) {
         i->accept(*this);
-        auto *F = STACK_GET(Function *);
+        STACK_GET(Function *);
     }
+
     std::error_code errorCode;
     llvm::raw_fd_ostream file("../output.ll", errorCode);
     module_->print(file, nullptr);

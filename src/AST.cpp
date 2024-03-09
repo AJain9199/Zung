@@ -26,7 +26,7 @@ FunctionCallExpression::FunctionCallExpression(std::string name, std::vector<std
 
 VariableExpression::VariableExpression(SymbolTableEntry *var) : variable(var) {}
 
-NumericConstantExpression::NumericConstantExpression(int v) : val(v) {}
+IntegralLiteralExpression::IntegralLiteralExpression(int v) : val(v) {}
 
 IfStatement::IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> t) : condition(
         std::move(cond)), then(std::move(t)) {}

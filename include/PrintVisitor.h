@@ -21,7 +21,7 @@ public:
     void visit(const AST::VariableExpression &) override;
     void visit(const AST::BinaryExpression &) override;
     void visit(const AST::UnaryExpression &) override;
-    void visit(const AST::NumericConstantExpression &) override;
+    void visit(const AST::IntegralLiteralExpression &) override;
     void visit(const AST::ExternFunction &) override;
     void visit(const AST::StringLiteralExpression &) override;
     void visit(const AST::FloatLiteralExpression &) override;
