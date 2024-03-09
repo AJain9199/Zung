@@ -228,8 +228,9 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
         i->accept(*this);
         auto *F = STACK_GET(Function *);
     }
-
-    module_->print(outs(), nullptr);
+    std::error_code errorCode;
+    llvm::raw_fd_ostream file("../output.ll", errorCode);
+    module_->print(file, nullptr);
 }
 
 void CodeGenerationEngine::get_llvm_function(const std::string &name) {

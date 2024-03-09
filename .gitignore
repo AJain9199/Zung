@@ -36,6 +36,7 @@ fabric.properties
 *.gch
 *.pch
 *.so
+*.so.*
 *.dylib
 *.dll
 *.mod

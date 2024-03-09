@@ -17,8 +17,6 @@ include_directories(include ${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
-add_compile_options(-O0)
-
 add_executable(Zung main.cpp src/Lexer.cpp src/AST.cpp src/ParsingEngine.cpp
         src/PrintVisitor.cpp
         src/SymbolTable.cpp
@@ -26,7 +24,7 @@ add_executable(Zung main.cpp src/Lexer.cpp src/AST.cpp src/ParsingEngine.cpp
 
 execute_process(COMMAND ~/llvm-project/build/bin/llvm-config --libs core --system-libs RESULT_VARIABLE l OUTPUT_VARIABLE llvm_libs)
 
-message(STATUS "LLVM_LIBS: ${llvm_libs} ${l}")
-
 # Link against LLVM libraries
-target_link_libraries(Zung LLVMCore LLVMRemarks LLVMBitstreamReader LLVMBinaryFormat LLVMTargetParser LLVMSupport LLVMDemangle rt dl m)
+add_library(llvm SHARED IMPORTED)
+set_target_properties(llvm PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/libLLVM.so)
+target_link_libraries(Zung llvm)
