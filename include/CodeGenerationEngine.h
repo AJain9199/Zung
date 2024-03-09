@@ -34,7 +34,7 @@ typedef std::map<std::string, std::unique_ptr<AST::FunctionPrototype>> func_tabl
  */
 class CodeGenerationEngine : public AST::ASTVisitor {
 private:
-    std::stack<std::any> stack_; /* TODO: Use a variant instead later in development */
+    std::stack<void *> stack_; /* TODO: Use a variant instead later in development */
     std::unique_ptr<llvm::LLVMContext> llvm_context_;
     std::unique_ptr<llvm::IRBuilder<>> builder_;
     std::unique_ptr<llvm::Module> module_;
@@ -61,6 +61,10 @@ public:
     void visit(const AST::ExternFunction &) override;
 
     void visit(const AST::CompoundStatement &) override;
+
+    void visit(const AST::ReturnStatement &) override;
+
+    void visit(const AST::ForStatement &) override;
 
     void visit(const AST::DeclarationStatement &) override;
 
@@ -89,8 +93,8 @@ public:
      * "returns" a value to the stack, by pushing onto it.
      * @param val: the value to be pushed onto the stack
      */
-    inline void stack_return(void * val) {
-        stack_.emplace(val);
+    inline void stack_return(void *val) {
+        stack_.push(val);
     }
 
     /*
@@ -101,7 +105,7 @@ public:
      */
     template<typename T>
     inline T stack_get() {
-        auto val = std::any_cast<T>(stack_.top());
+        auto val = (T)(stack_.top());
         stack_.pop();
         return val;
     }

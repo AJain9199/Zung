@@ -171,6 +171,15 @@ void CodeGenerationEngine::visit(const AST::FunctionPrototype &prototype) {
     STACK_RET(F);
 }
 
+void CodeGenerationEngine::visit(const AST::ReturnStatement &statement) {
+    if (statement.expr != nullptr) {
+        statement.expr->accept(*this);
+        builder_->CreateRet(STACK_GET(Value *));
+    } else {
+        builder_->CreateRetVoid();
+    }
+}
+
 void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
     Function *F = builder_->GetInsertBlock()->getParent();
 
@@ -293,4 +302,20 @@ void CodeGenerationEngine::visit(const AST::StringLiteralExpression &expression)
 
 void CodeGenerationEngine::visit(const AST::FloatLiteralExpression &expression) {
     STACK_RET(ConstantFP::get(*llvm_context_, APFloat(expression.val)));
+}
+
+void CodeGenerationEngine::visit(const AST::ForStatement &statement) {
+    statement.init->accept(*this);
+
+    auto *loop = BasicBlock::Create(*llvm_context_, "loop", builder_->GetInsertBlock()->getParent());
+    auto *exit = BasicBlock::Create(*llvm_context_, "exit", builder_->GetInsertBlock()->getParent());
+    builder_->CreateBr(loop);
+    builder_->SetInsertPoint(loop);
+    statement.body->accept(*this);
+    statement.update->accept(*this);
+    STACK_GET(Value *);
+    statement.condition->accept(*this);
+    auto cond = STACK_GET(Value *);
+    builder_->CreateCondBr(cond, loop, exit);
+    builder_->SetInsertPoint(exit);
 }

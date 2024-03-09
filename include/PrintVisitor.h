@@ -13,6 +13,8 @@ public:
     void visit(const AST::Function &) override;
     void visit(const AST::FunctionPrototype &) override;
     void visit(const AST::CompoundStatement &) override;
+    void visit(const AST::ReturnStatement &) override;
+    void visit(const AST::ForStatement &) override {};
     void visit(const AST::DeclarationStatement &) override;
     void visit(const AST::ExpressionStatement &) override;
     void visit(const AST::IfStatement &) override;

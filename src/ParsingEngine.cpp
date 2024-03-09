@@ -109,14 +109,16 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 
     if (is(';')) {
         eat(';');
-        return std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
-                                               nullptr);
+        return std::make_unique<AST::Function>(
+                std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
+                nullptr);
     }
 
     auto body = parseCompoundStatement();
 
-    auto func = std::make_unique<AST::Function>(std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
-                                                std::move(body));
+    auto func = std::make_unique<AST::Function>(
+            std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
+            std::move(body));
     func->symbol_table = sym;
     return func;
 }
@@ -157,7 +159,7 @@ std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool *is_va
 std::unique_ptr<AST::CompoundStatement> ParsingEngine::parseCompoundStatement() {
     std::vector<std::unique_ptr<AST::Statement>> statements;
     eat('{');
-    while (!is('}')) {
+    while (!(is('}') && lexer.get() == PUNCTUATION)) {
         statements.push_back(parse_statement());
     }
     eat('}');
@@ -484,9 +486,12 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_statement() {
     if (lexer.get() == KEYWORD) {
         if (lexer.keyword() == VAR) {
             return parse_declaration_statement();
-        }
-        if (lexer.keyword() == IF) {
+        } else if (lexer.keyword() == IF) {
             return parse_if_statement();
+        } else if (lexer.keyword() == RETURN) {
+            return parseReturnStatement();
+        } else if (lexer.keyword() == FOR) {
+            return parseForStatement();
         } else {
             std::cerr << "Unexpected token" << std::endl;
             return nullptr;
@@ -514,7 +519,7 @@ void ParsingEngine::parseStruct() {
     eat(STRUCT);
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);
-    (*type_table)[id] = (struct TypeInfo){t, {}};
+    (*type_table)[id] = (struct TypeInfo) {t, {}};
     bool packed = false;
 
     if (is(PACKED)) {
@@ -560,4 +565,32 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseFloatLiteralExpression() {
         std::cerr << "Unexpected token" << std::endl;
         return nullptr;
     }
+}
+
+std::unique_ptr<AST::Statement> ParsingEngine::parseReturnStatement() {
+    eat(RETURN);
+    std::unique_ptr<AST::Expression> expr = nullptr;
+    if (!(lexer.get() == PUNCTUATION && is(';'))) {
+        expr = parseExpression();
+        eat(';');
+        return std::make_unique<AST::ReturnStatement>(std::move(expr));
+    } else {
+        eat(';');
+        return std::make_unique<AST::ReturnStatement>(nullptr);
+    }
+}
+
+std::unique_ptr<AST::Statement> ParsingEngine::parseForStatement() {
+    eat(FOR);
+
+    eat('(');
+    auto init = parse_statement();
+    auto cond = parseExpression();
+    eat(';');
+    auto update = parseExpression();
+
+    eat(')');
+    auto body = parseCompoundStatement();
+
+    return std::make_unique<AST::ForStatement>(std::move(init), std::move(cond), std::move(update), std::move(body));
 }

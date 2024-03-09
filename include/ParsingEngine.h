@@ -60,6 +60,8 @@ private:
 
     /* Parsing statements */
     std::unique_ptr<AST::Statement> parse_statement();
+    std::unique_ptr<AST::Statement> parseReturnStatement();
+    std::unique_ptr<AST::Statement> parseForStatement();
     std::unique_ptr<AST::Statement> parse_expression_statement();
     std::unique_ptr<AST::Statement> parse_if_statement();
     std::unique_ptr<AST::Statement> parse_declaration_statement();

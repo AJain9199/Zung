@@ -35,6 +35,9 @@ namespace AST {
     class Statement; /* Base statement */
     class CompoundStatement;
 
+    class ReturnStatement;
+    class ForStatement;
+
     class DeclarationStatement;
 
     class ExpressionStatement;
@@ -78,6 +81,10 @@ namespace AST {
         virtual void visit(const AST::CompoundStatement &) = 0;
 
         virtual void visit(const AST::DeclarationStatement &) = 0;
+
+        virtual void visit(const AST::ReturnStatement &) = 0;
+
+        virtual void visit(const AST::ForStatement &) = 0;
 
         virtual void visit(const AST::ExpressionStatement &) = 0;
 
@@ -199,6 +206,18 @@ namespace AST {
     };
 
     /*
+     * A return statement with an optional return value.
+     */
+    class ReturnStatement : public Statement {
+    public:
+        explicit ReturnStatement(std::unique_ptr<Expression> e) : expr(std::move(e)) {};
+
+        std::unique_ptr<Expression> expr;
+
+        INJECT_ACCEPT();
+    };
+
+    /*
      * A declaration statement. Multiple variables may be declared, with different types and initial values.
      */
     class DeclarationStatement : public Statement {
@@ -218,6 +237,21 @@ namespace AST {
         explicit ExpressionStatement(std::unique_ptr<Expression> e);
 
         std::unique_ptr<Expression> expr;
+
+        INJECT_ACCEPT();
+    };
+
+    /*
+     * Represents a for loop.
+     */
+    class ForStatement : public Statement {
+    public:
+        std::unique_ptr<Statement> init;
+        std::unique_ptr<Expression> condition;
+        std::unique_ptr<Expression> update;
+        std::unique_ptr<CompoundStatement> body;
+
+        ForStatement(std::unique_ptr<Statement> i, std::unique_ptr<Expression> cond, std::unique_ptr<Expression> up, std::unique_ptr<CompoundStatement> b) : init(std::move(i)), condition(std::move(cond)), update(std::move(up)), body(std::move(b)) {};
 
         INJECT_ACCEPT();
     };

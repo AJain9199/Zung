@@ -159,3 +159,7 @@ void PrintVisitor::visit(const AST::StringLiteralExpression &) {
 void PrintVisitor::visit(const AST::FloatLiteralExpression &) {
 
 }
+
+void PrintVisitor::visit(const AST::ReturnStatement &) {
+    std::cout << "return";
+}
