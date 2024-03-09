@@ -56,8 +56,8 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
 
     eat('(');
     while (!is(')')) {
-        if (is(ELIPSES)) {
-            eat(ELIPSES);
+        if (is(ELLIPSIS)) {
+            eat(ELLIPSIS);
             va = true;
             break;
         }
@@ -129,8 +129,8 @@ std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool *is_va
 
     eat('(');
     while (!is(')')) {
-        if (is(ELIPSES)) {
-            eat(ELIPSES);
+        if (is(ELLIPSIS)) {
+            eat(ELLIPSIS);
             if (is_var_args != nullptr) {
                 *is_var_args = true;
             }
@@ -220,6 +220,9 @@ llvm::Type *ParsingEngine::parseType() {
                 break;
             case VOID:
                 basic_type = llvm::Type::getVoidTy(*llvm_context_);
+                break;
+            case DOUBLE:
+                basic_type = llvm::Type::getDoubleTy(*llvm_context_);
                 break;
         }
     } else { // token is an identifier
@@ -418,7 +421,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_expression_statement() {
  * parenthesized_expression
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
-    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL)) {
+    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL, FLOAT_LITERAL)) {
         case NUMERIC_LITERAL:
             return parseNumericLiteralExpression();
         case STR_LITERAL:
@@ -427,6 +430,8 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
             return parseIdentifierExpression();
         case PUNCTUATION:
             return parseParenthesizedExpression();
+        case FLOAT_LITERAL:
+            return parseFloatLiteralExpression();
         default:
             std::cerr << "Unexpected token";
             return nullptr;
@@ -540,6 +545,17 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseStringLiteralExpression() {
         std::string str = lexer.identifier();
         lexer.advance();
         return std::make_unique<AST::StringLiteralExpression>(str);
+    } else {
+        std::cerr << "Unexpected token" << std::endl;
+        return nullptr;
+    }
+}
+
+std::unique_ptr<AST::Expression> ParsingEngine::parseFloatLiteralExpression() {
+    if (is(FLOAT_LITERAL)) {
+        double val = lexer.float_literal();
+        lexer.advance();
+        return std::make_unique<AST::FloatLiteralExpression>(val);
     } else {
         std::cerr << "Unexpected token" << std::endl;
         return nullptr;

@@ -45,6 +45,7 @@ namespace AST {
     class UnaryExpression;
     class NumericConstantExpression;
     class StringLiteralExpression;
+    class FloatLiteralExpression;
 
     class ASTVisitor {
     public:
@@ -64,6 +65,7 @@ namespace AST {
         virtual void visit(const AST::StringLiteralExpression &) = 0;
         virtual void visit(const AST::TranslationUnit &) = 0;
         virtual void visit(const AST::ExternFunction &) = 0;
+        virtual void visit(const AST::FloatLiteralExpression &) = 0;
     };
 
     class AbstractNode {
@@ -169,6 +171,19 @@ namespace AST {
     class AssignableExpression : public Expression {
     public:
         llvm::Type *type(llvm::LLVMContext *) override = 0;
+    };
+
+    class FloatLiteralExpression : public Expression {
+    public:
+        explicit FloatLiteralExpression(double v) : val(v) {};
+
+        double val;
+
+        INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return llvm::Type::getDoubleTy(*context);
+        };
     };
 
     class NumericConstantExpression : public Expression {

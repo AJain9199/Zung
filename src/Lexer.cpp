@@ -31,7 +31,7 @@ TokenType Lexer::getToken() {
                 next();
                 if (current_char_ == '.') {
                     char_value_ = (char) 0;
-                    return ELIPSES;
+                    return ELLIPSIS;
                 }
                 rewind();
             }
@@ -141,6 +141,9 @@ TokenType Lexer::getToken() {
         } else if (identifier_ == "int") {
             default_type_ = INT;
             return DEFAULT_TYPE;
+        } else if (identifier_ == "double") {
+            default_type_ = DOUBLE;
+            return DEFAULT_TYPE;
         } else if (identifier_ == "for") {
             keyword_ = FOR;
         } else if (identifier_ == "const") {
@@ -171,7 +174,18 @@ TokenType Lexer::getToken() {
     } else if (isdigit(current_char_)) {
         identifier_ = current_char_;
         next();
-        while (isdigit(current_char_)) {
+        while (isdigit(current_char_) || current_char_ == '.') {
+            if (current_char_ == '.') {
+                identifier_ += current_char_;
+                next();
+                while (isdigit(current_char_)) {
+                    identifier_ += current_char_;
+                    next();
+                }
+                rewind();
+                float_val_ = std::stod(identifier_);
+                return FLOAT_LITERAL;
+            }
             identifier_ += current_char_;
             next();
         }
@@ -237,4 +251,8 @@ int Lexer::numeric_literal() const {
 
 enum DeclarationSpecifier Lexer::declaration_specifier() const {
     return declaration_specifier_;
+}
+
+double Lexer::float_literal() const {
+    return float_val_;
 }

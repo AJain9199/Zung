@@ -70,6 +70,8 @@ public:
 
     void visit(const AST::StringLiteralExpression &) override;
 
+    void visit(const AST::FloatLiteralExpression &) override;
+
     inline void stack_return(void * val) {
         stack_.push(val);
     }

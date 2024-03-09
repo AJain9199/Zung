@@ -155,3 +155,7 @@ void PrintVisitor::visit(const AST::StringLiteralExpression &) {
     std::cout << "String Literal Expression" << std::endl;
     tab_level--;
 }
+
+void PrintVisitor::visit(const AST::FloatLiteralExpression &) {
+
+}

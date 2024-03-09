@@ -74,9 +74,9 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
         case OR:
             binop = Instruction::Or;
             goto binary_ops;
-        case XOR:
-            binop = Instruction::Xor;
-            goto binary_ops;
+//        case XOR:
+//            binop = Instruction::Xor;
+//            goto binary_ops;
         case LOGICAL_AND:
             binop = Instruction::And;
             goto rel_ops;
@@ -101,6 +101,10 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
         case LEQ:
             icmp = ICmpInst::ICMP_SLE;
             goto cmp_ops;
+        case EXP:
+            STACK_RET(builder_->CreateCall(module_->getFunction("pow"), {LHS, RHS}));
+        case FLR:
+            STACK_RET(builder_->CreateCall(module_->getFunction("flr"), {LHS, RHS}));
         default:
             throw std::runtime_error("Not implemented yet");
     }
@@ -285,4 +289,8 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
 
 void CodeGenerationEngine::visit(const AST::StringLiteralExpression &expression) {
     STACK_RET(builder_->CreateGlobalStringPtr(expression.val));
+}
+
+void CodeGenerationEngine::visit(const AST::FloatLiteralExpression &expression) {
+    STACK_RET(ConstantFP::get(*llvm_context_, APFloat(expression.val)));
 }

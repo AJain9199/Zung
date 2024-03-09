@@ -15,11 +15,12 @@ enum TokenType {
     NUMERIC_LITERAL, // [0-9]+
     STR_LITERAL, // ".+"
     BOOLEAN_LITERAL, // true, false
+    FLOAT_LITERAL,
 
     /* operators */
     OP,
 
-    ELIPSES,
+    ELLIPSIS,
 
     PUNCTUATION,
 
@@ -75,6 +76,7 @@ enum DefaultType {
     INT,
     CHAR,
     VOID,
+    DOUBLE,
 };
 
 class Lexer {
@@ -94,6 +96,7 @@ public:
     [[nodiscard]] int numeric_literal() const;
     [[nodiscard]] enum DeclarationSpecifier declaration_specifier() const;
     [[nodiscard]] enum DefaultType default_type() const;
+    [[nodiscard]] double float_literal() const;
 
 private:
     enum TokenType getToken();
@@ -108,6 +111,7 @@ private:
     std::string identifier_{};
     enum Operator operator_{};
     int int_val_ = 0;
+    double float_val_ = 0;
     enum Keyword keyword_{};
     enum DeclarationSpecifier declaration_specifier_{};
     enum DefaultType default_type_{};

@@ -24,6 +24,7 @@ public:
     void visit(const AST::NumericConstantExpression &) override;
     void visit(const AST::ExternFunction &) override;
     void visit(const AST::StringLiteralExpression &) override;
+    void visit(const AST::FloatLiteralExpression &) override;
 };
 
 #endif //ZUNG_PRINTVISITOR_H
