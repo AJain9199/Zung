@@ -262,9 +262,12 @@ namespace AST {
     class IfStatement : public Statement {
     public:
         std::unique_ptr<Expression> condition;
-        std::unique_ptr<CompoundStatement> then;
+        std::unique_ptr<Statement> body;
+        std::unique_ptr<Statement> else_body;
 
-        IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> t);
+        IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<Statement> b, std::unique_ptr<Statement> e) : condition(std::move(cond)), body(std::move(b)), else_body(std::move(e)) {};
+
+        INJECT_ACCEPT();
     };
 
     /*

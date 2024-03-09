@@ -160,6 +160,10 @@ TokenType Lexer::getToken() {
             return DEFAULT_TYPE;
         } else if (identifier_ == "for") {
             keyword_ = FOR;
+        } else if (identifier_ == "elif") {
+            keyword_ = ELIF;
+        } else if (identifier_ == "else") {
+            keyword_ = ELSE;
         } else if (identifier_ == "const") {
             declaration_specifier_ = CONST;
             return DECLARATION_SPECIFIER;

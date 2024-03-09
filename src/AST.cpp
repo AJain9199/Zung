@@ -28,9 +28,6 @@ VariableExpression::VariableExpression(SymbolTableEntry *var) : variable(var) {}
 
 IntegralLiteralExpression::IntegralLiteralExpression(int v) : val(v) {}
 
-IfStatement::IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> t) : condition(
-        std::move(cond)), then(std::move(t)) {}
-
 ExpressionStatement::ExpressionStatement(std::unique_ptr<Expression> e) : expr(std::move(e)) {}
 
 DeclarationStatement::DeclarationStatement(std::map<SymbolTableEntry *, std::unique_ptr<Expression>> i_list)

@@ -70,7 +70,7 @@ public:
 
     void visit(const AST::ExpressionStatement &) override;
 
-    void visit(const AST::IfStatement &) override {};
+    void visit(const AST::IfStatement &) override;
 
     void visit(const AST::ArrayIndexingExpression &) override {};
 

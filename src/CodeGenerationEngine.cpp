@@ -319,3 +319,28 @@ void CodeGenerationEngine::visit(const AST::ForStatement &statement) {
     builder_->CreateCondBr(cond, loop, exit);
     builder_->SetInsertPoint(exit);
 }
+
+void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
+    auto if_block = BasicBlock::Create(*llvm_context_, "if", builder_->GetInsertBlock()->getParent());
+    auto exit = BasicBlock::Create(*llvm_context_, "exit", builder_->GetInsertBlock()->getParent());
+    statement.condition->accept(*this);
+    auto cond = STACK_GET(Value *);
+
+    if (statement.else_body != nullptr) {
+
+        auto else_block = BasicBlock::Create(*llvm_context_, "else", builder_->GetInsertBlock()->getParent());
+        builder_->CreateCondBr(cond, if_block, else_block);
+
+        builder_->SetInsertPoint(if_block);
+        statement.body->accept(*this);
+        builder_->CreateBr(exit);
+
+        builder_->SetInsertPoint(else_block);
+        statement.else_body->accept(*this);
+        builder_->CreateBr(exit);
+    } else {
+        builder_->CreateCondBr(cond, if_block, exit);
+    }
+
+    builder_->SetInsertPoint(exit);
+}

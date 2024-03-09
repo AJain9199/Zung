@@ -410,7 +410,7 @@ ParsingEngine::parseBinaryExpression(unsigned int min_precedence, std::unique_pt
 /* Parses an expression statement of the syntax:
  * expression;
  * */
-std::unique_ptr<AST::Statement> ParsingEngine::parse_expression_statement() {
+std::unique_ptr<AST::Statement> ParsingEngine::parseExpressionStatement() {
     auto expr = parseExpression();
     eat(';');
 
@@ -443,20 +443,26 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
 /* Parses a basic if statement of the syntax:
  * if (expression) compound_statement
  * */
-std::unique_ptr<AST::Statement> ParsingEngine::parse_if_statement() {
+std::unique_ptr<AST::Statement> ParsingEngine::parseIfStatement() {
     eat(IF);
     eat('(');
     auto condition = parseExpression();
     eat(')');
-    auto then = parseCompoundStatement();
+    auto then = parse_statement();
 
-    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(then));
+    if (is(ELSE)) {
+        eat(ELSE);
+        auto else_stmt = parse_statement();
+        return std::make_unique<AST::IfStatement>(std::move(condition), std::move(then), std::move(else_stmt));
+    } else {
+        return std::make_unique<AST::IfStatement>(std::move(condition), std::move(then), nullptr);
+    }
 }
 
 /* Parses a declaration statement of the syntax:
  * var type identifier_ (= expression)? (, identifier_ (= expression)?)*;
  * */
-std::unique_ptr<AST::Statement> ParsingEngine::parse_declaration_statement() {
+std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement() {
     eat(VAR);
 
     std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
@@ -485,9 +491,9 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_declaration_statement() {
 std::unique_ptr<AST::Statement> ParsingEngine::parse_statement() {
     if (lexer.get() == KEYWORD) {
         if (lexer.keyword() == VAR) {
-            return parse_declaration_statement();
+            return parseDeclarationStatement();
         } else if (lexer.keyword() == IF) {
-            return parse_if_statement();
+            return parseIfStatement();
         } else if (lexer.keyword() == RETURN) {
             return parseReturnStatement();
         } else if (lexer.keyword() == FOR) {
@@ -496,9 +502,11 @@ std::unique_ptr<AST::Statement> ParsingEngine::parse_statement() {
             std::cerr << "Unexpected token" << std::endl;
             return nullptr;
         }
+    } else if (lexer.get() == PUNCTUATION && lexer.character() == '{') {
+        return parseCompoundStatement();
     }
 
-    return parse_expression_statement();
+    return parseExpressionStatement();
 }
 
 void ParsingEngine::eat(enum Operator op) {

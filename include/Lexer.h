@@ -61,6 +61,8 @@ enum Keyword {
     FOR,
     RETURN,
     IF,
+    ELIF,
+    ELSE,
     VAR,
     EXTERN,
     CLASS,
