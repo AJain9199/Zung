@@ -256,6 +256,10 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
         case MUL:
         STACK_RET(builder_->CreateLoad(val->getType(), val));
         case AND: {
+            if (dynamic_cast<AST::VariableExpression *>(expression.Operand.get()) != nullptr) {
+                STACK_RET(symbol_table_[dynamic_cast<AST::VariableExpression *>(expression.Operand.get())->variable]);
+            }
+
             auto var = create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "",
                                                  val->getType()->getPointerTo());
             builder_->CreateStore(val, var);

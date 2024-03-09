@@ -8,10 +8,18 @@
 #include <SymbolTable.h>
 #include <Lexer.h>
 #include <map>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/DerivedTypes.h>
 
 #define INJECT_ACCEPT() void accept(ASTVisitor &v) override { v.visit(*this); }
 
 struct TypeInfo;
+
+template<typename T, typename ...Tokens>
+static bool in(T token, T first, Tokens... tokens) {
+    return ((token == first) || in(token, tokens...));
+}
 
 namespace AST {
     class ASTVisitor;
@@ -154,8 +162,14 @@ namespace AST {
         IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> t);
     };
 
-    class Expression : public AbstractNode {};
-    class AssignableExpression : public Expression {};
+    class Expression : public AbstractNode {
+    public:
+        virtual llvm::Type *type(llvm::LLVMContext *) =  0;
+    };
+    class AssignableExpression : public Expression {
+    public:
+        llvm::Type *type(llvm::LLVMContext *) override = 0;
+    };
 
     class NumericConstantExpression : public Expression {
     public:
@@ -164,6 +178,10 @@ namespace AST {
         int val;
 
         INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return llvm::Type::getInt32Ty(*context);
+        };
     };
 
     class VariableExpression : public AssignableExpression {
@@ -173,6 +191,10 @@ namespace AST {
         Symbols::SymbolTableEntry *variable{};
 
         INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return variable->type;
+        };
     };
 
     class FunctionCallExpression : public Expression {
@@ -183,6 +205,10 @@ namespace AST {
         std::vector<std::unique_ptr<Expression>> args;
 
         INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return llvm::Type::getVoidTy(*context);
+        };
     };
 
     class ArrayIndexingExpression : public AssignableExpression {
@@ -193,6 +219,10 @@ namespace AST {
         std::vector<std::unique_ptr<Expression>> index;
 
         INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return array->variable->type;
+        };
     };
 
     class BinaryExpression : public Expression {
@@ -204,6 +234,49 @@ namespace AST {
         std::unique_ptr<Expression> RHS;
 
         INJECT_ACCEPT();
+
+        llvm::Type * type(llvm::LLVMContext *context) override {
+            auto ltype = LHS->type(context);
+            auto rtype = RHS->type(context);
+
+            if (ltype == nullptr && rtype == nullptr) {
+                return nullptr;
+            }
+
+            if (ltype == nullptr) {
+                return rtype;
+            }
+
+            if (rtype == nullptr) {
+                return ltype;
+            }
+
+            if (ltype->isIntegerTy()) {
+                if (op == Operator::ADD || op == Operator::SUB || op == Operator::MUL || op == Operator::FLR || op == Operator::MOD) {
+                    if (rtype->isIntegerTy()) {
+                        return rtype->getIntegerBitWidth() > ltype ->getIntegerBitWidth() ? rtype : ltype;
+                    } else if (rtype->isFloatTy()) {
+                        return rtype;
+                    }
+                } else if (op == Operator::DIV) {
+                    return llvm::Type::getFloatTy(*context);
+                }
+            }
+
+            if (ltype->isFloatTy() || rtype->isFloatTy()) {
+                return ltype;
+            }
+
+            if (op == Operator::EQ || op == Operator::NEQ || op == Operator::LE || op == Operator::GE || op == Operator::LEQ || op == Operator::GEQ) {
+                return llvm::Type::getInt1Ty(*context);
+            }
+
+            if (ltype->isPointerTy() || rtype->isPointerTy()) {
+                return ltype;
+            }
+
+            return nullptr;
+        }
     };
 
     class UnaryExpression : public Expression {
@@ -214,6 +287,27 @@ namespace AST {
         std::unique_ptr<Expression> Operand;
 
         INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            auto optype = Operand->type(context);
+
+            if (op == Operator::AND) {
+                return optype->getPointerTo();
+            }
+
+            if (op == Operator::MUL) {
+                return nullptr;
+            }
+
+            if (optype->isIntegerTy()) {
+                if (op == Operator::SUB) {
+                    return optype;
+                }
+            } else if (optype->isFloatTy()) {
+                return optype;
+            }
+            return nullptr;
+        };
     };
 
     class StringLiteralExpression : public Expression {
@@ -223,6 +317,10 @@ namespace AST {
         std::string val;
 
         INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return llvm::Type::getInt8Ty(*context)->getPointerTo();
+        };
     };
 }
 
