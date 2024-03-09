@@ -17,6 +17,8 @@ include_directories(include ${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
+add_subdirectory(libs)
+
 add_executable(Zung main.cpp src/Lexer.cpp src/AST.cpp src/ParsingEngine.cpp
         src/PrintVisitor.cpp
         src/SymbolTable.cpp
