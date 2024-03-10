@@ -22,24 +22,8 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             throw std::runtime_error("LHS of assignment must be an assignable expression");
         }
 
-        if (dynamic_cast<AST::FieldAccessExpression *>(expression.LHS.get()) != nullptr) {
-            auto *field = dynamic_cast<AST::FieldAccessExpression *>(expression.LHS.get());
-            if (dynamic_cast<AST::VariableExpression *>(field->struct_.get()) != nullptr) {
-                auto base_struct = symbol_table_[dynamic_cast<AST::VariableExpression *>(field->struct_.get())->variable];
-                auto get_field = builder_->CreateStructGEP(base_struct->getAllocatedType(), base_struct, field->field);
-                expression.RHS->accept(*this);
-                auto *RHS = STACK_GET(Value *);
-                builder_->CreateStore(RHS, get_field);
-                STACK_RET(RHS);
-            }
-        }
-
-        Value *LHS = nullptr;
-        auto *exp = dynamic_cast<AST::VariableExpression *>(expression.LHS.get());
-        if (exp != nullptr) {
-            LHS = symbol_table_[exp->variable];
-        }
-
+        expression.LHS->accept(*rvalue_engine_);
+        auto *LHS = STACK_GET(Value *);
         expression.RHS->accept(*this);
         auto *RHS = STACK_GET(Value *);
 
@@ -357,19 +341,20 @@ void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
-    if (dynamic_cast<AST::VariableExpression *>(expression.struct_.get()) != nullptr) {
-        auto base_struct = symbol_table_[dynamic_cast<AST::VariableExpression *>(expression.struct_.get())->variable];
-        auto get_field = builder_->CreateStructGEP(base_struct->getAllocatedType(), base_struct, expression.field);
-        STACK_RET(builder_->CreateLoad(base_struct->getAllocatedType()->getStructElementType(expression.field), get_field));
+    llvm::Value *base_struct;
+    if (expression.struct_->assignable()) {
+        expression.struct_->accept(*rvalue_engine_);
+        base_struct = STACK_GET(llvm::Value *);
+        auto get_field = builder_->CreateStructGEP(base_struct->getType(), base_struct, expression.field);
+        STACK_RET(builder_->CreateLoad(base_struct->getType()->getStructElementType(expression.field), get_field));
+    } else {
+        expression.struct_->accept(*this);
+        auto *struct_ptr = STACK_GET(llvm::Value *);
+        auto type = struct_ptr->getType();
+        auto tmp = CodeGenerationEngine::create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "", type);
+        builder_->CreateStore(struct_ptr, tmp);
+
+        auto get_field = builder_->CreateStructGEP(tmp->getAllocatedType(), tmp, expression.field);
+        STACK_RET(builder_->CreateLoad(tmp->getAllocatedType()->getStructElementType(expression.field), get_field));
     }
-
-    expression.struct_->accept(*this);
-    auto base_struct = STACK_GET(Value *);
-    auto type = base_struct->getType();
-    type->print(llvm::errs(), true);
-    auto tmp = create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "", type);
-    builder_->CreateStore(base_struct, tmp);
-
-    auto get_field = builder_->CreateStructGEP(base_struct->getType(), tmp, expression.field);
-    STACK_RET(builder_->CreateLoad(base_struct->getType()->getStructElementType(expression.field), get_field));
 }

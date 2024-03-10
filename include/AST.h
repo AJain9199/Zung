@@ -281,6 +281,10 @@ namespace AST {
     class Expression : public AbstractNode {
     public:
         virtual llvm::Type *type(llvm::LLVMContext *) = 0;
+
+        virtual bool assignable() {
+            return false;
+        }
     };
 
     /*
@@ -290,6 +294,10 @@ namespace AST {
     class AssignableExpression : public Expression {
     public:
         llvm::Type *type(llvm::LLVMContext *) override = 0;
+
+        bool assignable() override {
+            return true;
+        }
     };
 
     class FunctionNameExpression : public Expression {

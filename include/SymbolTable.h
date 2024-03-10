@@ -32,6 +32,7 @@ private:
     std::vector<SymbolTableEntry *> subroutine_symbols_;
     std::vector<SymbolTableEntry *> global_symbols_;
 };
+
 class FunctionTable {
 public:
     Symbols::FunctionTableEntry *define(std::string name, llvm::Type *return_type) {

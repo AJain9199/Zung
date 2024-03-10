@@ -22,7 +22,9 @@ add_subdirectory(libs)
 add_executable(Zung main.cpp src/Lexer.cpp src/AST.cpp src/ParsingEngine.cpp
         src/PrintVisitor.cpp
         src/SymbolTable.cpp
-        src/CodeGenerationEngine.cpp)
+        src/CodeGenerationEngine.cpp
+        src/LValueCodeGenerationEngine.cpp
+)
 
 execute_process(COMMAND ~/llvm-project/build/bin/llvm-config --libs core --system-libs RESULT_VARIABLE l OUTPUT_VARIABLE llvm_libs)
 

@@ -25,6 +25,8 @@
 
 typedef std::map<std::string, std::unique_ptr<AST::FunctionPrototype>> func_table_t;
 
+class CodeGenerationEngine;
+
 /*
  * The code generation engine is responsible for generating LLVM IR from the AST. It uses the visitor pattern to traverse
  * the Abstract Syntax Tree, and generates the corresponding LLVM IR for each node.
@@ -43,12 +45,66 @@ private:
     func_table_t function_table_;
 
     void get_llvm_function(const std::string &name);
-    static llvm::AllocaInst *create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type);
+
+    static llvm::AllocaInst *
+    create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type);
+
+    class LValueCodeGenerationEngine : public AST::ASTVisitor {
+    private:
+        CodeGenerationEngine *engine_;
+    public:
+
+        explicit LValueCodeGenerationEngine(CodeGenerationEngine *engine) : engine_(engine) {}
+
+        void visit(const AST::VariableExpression &) override;
+        void visit(const AST::FieldAccessExpression &) override;
+        void visit(const AST::AbstractNode &) override {};
+
+        void visit(const AST::TranslationUnit &) override {};
+
+        void visit(const AST::Function &) override {};
+
+        void visit(const AST::FunctionPrototype &) override {};
+
+        void visit(const AST::ExternFunction &) override {};
+
+        void visit(const AST::CompoundStatement &) override {};
+
+        void visit(const AST::ReturnStatement &) override {};
+
+        void visit(const AST::ForStatement &) override {};
+
+        void visit(const AST::DeclarationStatement &) override {};
+
+        void visit(const AST::ExpressionStatement &) override {};
+
+        void visit(const AST::IfStatement &) override {};
+
+        void visit(const AST::ArrayIndexingExpression &) override {};
+
+        void visit(const AST::FunctionCallExpression &) override {};
+
+        void visit(const AST::BinaryExpression &) override {};
+
+        void visit(const AST::UnaryExpression &) override {};
+
+        void visit(const AST::IntegralLiteralExpression &) override {};
+
+        void visit(const AST::StringLiteralExpression &) override {};
+
+       void visit(const AST::FloatLiteralExpression &) override {};
+    };
+
+    LValueCodeGenerationEngine *rvalue_engine_;
+
 
 public:
     explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context) : llvm_context_(std::move(context)),
-                             builder_(std::make_unique<llvm::IRBuilder<>>(*llvm_context_)),
-                             module_(std::make_unique<llvm::Module>("main", *llvm_context_)) {}
+                                                                                builder_(
+                                                                                        std::make_unique<llvm::IRBuilder<>>(
+                                                                                                *llvm_context_)),
+                                                                                module_(std::make_unique<llvm::Module>(
+                                                                                        "main", *llvm_context_)), rvalue_engine_(new LValueCodeGenerationEngine(this)) {}
 
     void visit(const AST::AbstractNode &) override {};
 
@@ -107,14 +163,10 @@ public:
      */
     template<typename T>
     inline T stack_get() {
-        auto val = (T)(stack_.top());
+        auto val = (T) (stack_.top());
         stack_.pop();
         return val;
     }
-
-    class RvalueCodeGenerationEngine : public AST::ASTVisitor {
-
-    };
 };
 
 #endif //ZUNG_CODEGENERATIONENGINE_H
