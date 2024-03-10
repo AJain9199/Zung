@@ -24,6 +24,7 @@ class ParsingEngine {
 public:
     explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {
         type_table = new std::map<std::string, struct TypeInfo>();
+        funcTab_ = new Symbols::FunctionTable();
         lexer.advance();
     }
 
@@ -49,6 +50,7 @@ private:
 
     /* Parse expressions */
     std::unique_ptr<AST::Expression> parseNumericLiteralExpression();
+    std::unique_ptr<AST::Expression> parsePostfix(std::unique_ptr<AST::Expression> LHS);
     std::unique_ptr<AST::Expression> parseIdentifierExpression();
     std::unique_ptr<AST::Expression> parseParenthesizedExpression();
     std::unique_ptr<AST::Expression> parseUnaryExpression();
@@ -59,7 +61,7 @@ private:
     std::unique_ptr<AST::Expression> parseFloatLiteralExpression();
 
     /* Parsing statements */
-    std::unique_ptr<AST::Statement> parse_statement();
+    std::unique_ptr<AST::Statement> parseStatement();
     std::unique_ptr<AST::Statement> parseReturnStatement();
     std::unique_ptr<AST::Statement> parseForStatement();
     std::unique_ptr<AST::Statement> parseExpressionStatement();
@@ -83,6 +85,7 @@ private:
     bool is(enum Operator op);
 
     Symbols::SymbolTable *symTab_{};
+    Symbols::FunctionTable *funcTab_{};
 
     static std::map<enum Operator, int> precedence;
     static inline int getTokenPrecedence(enum Operator op) {

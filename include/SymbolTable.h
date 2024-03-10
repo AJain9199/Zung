@@ -14,6 +14,11 @@ typedef struct {
     std::string name;
 } SymbolTableEntry;
 
+typedef struct {
+    std::string name;
+    llvm::Type *return_type;
+} FunctionTableEntry;
+
 enum VarType {
     GLOBAL,
     LOCAL
@@ -27,6 +32,29 @@ private:
     std::vector<SymbolTableEntry *> subroutine_symbols_;
     std::vector<SymbolTableEntry *> global_symbols_;
 };
+class FunctionTable {
+public:
+    Symbols::FunctionTableEntry *define(std::string name, llvm::Type *return_type) {
+        auto *entry = new Symbols::FunctionTableEntry();
+        entry->name = std::move(name);
+        entry->return_type = return_type;
+        function_table_.push_back(entry);
+        return entry;
+    }
+
+    Symbols::FunctionTableEntry *find(const std::string& name) {
+        for (auto &entry : function_table_) {
+            if (entry->name == name) {
+                return entry;
+            }
+        }
+        return nullptr;
+    }
+
+private:
+    std::vector<Symbols::FunctionTableEntry *> function_table_;
+};
 }
+
 
 #endif //ZUNG_SYMBOLTABLE_H

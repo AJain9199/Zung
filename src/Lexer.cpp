@@ -252,7 +252,7 @@ bool Lexer::hasMoreTokens() {
 }
 
 char Lexer::character() const {
-    return char_value_;
+    return (current_token_ == PUNCTUATION) ? char_value_ : '\0';
 }
 
 enum DefaultType Lexer::default_type() const {

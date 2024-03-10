@@ -53,6 +53,8 @@ namespace AST {
 
     class VariableExpression;
 
+    class FieldAccessExpression;
+
     class BinaryExpression;
 
     class UnaryExpression;
@@ -97,6 +99,8 @@ namespace AST {
         virtual void visit(const AST::UnaryExpression &) = 0;
 
         virtual void visit(const AST::VariableExpression &) = 0;
+
+        virtual void visit(const AST::FieldAccessExpression &) = 0;
 
         virtual void visit(const AST::FunctionCallExpression &) = 0;
 
@@ -288,6 +292,19 @@ namespace AST {
         llvm::Type *type(llvm::LLVMContext *) override = 0;
     };
 
+    class FunctionNameExpression : public Expression {
+    public:
+        explicit FunctionNameExpression(Symbols::FunctionTableEntry *f) : func(f) {};
+
+        Symbols::FunctionTableEntry *func;
+
+        INJECT_ACCEPT();
+
+        llvm::Type *type(llvm::LLVMContext *context) override {
+            return llvm::FunctionType::get(llvm::Type::getVoidTy(*context), false);
+        };
+    };
+
     /*
      * A floating point literal expression.
      */
@@ -337,19 +354,44 @@ namespace AST {
     };
 
     /*
+     * Field Access
+     */
+    class FieldAccessExpression : public AssignableExpression {
+    public:
+        FieldAccessExpression(std::unique_ptr<AST::Expression> s, int f) : struct_(std::move(s)) , field(f) {};
+
+        std::unique_ptr<AST::Expression> struct_;
+        int field;
+
+        INJECT_ACCEPT();
+
+        llvm::Type * type(llvm::LLVMContext *ctx) override {
+            return struct_->type(ctx)->getStructElementType(field);
+        }
+    };
+
+    /*
      * A function call expression. It may or may not have arguments.
      */
     class FunctionCallExpression : public Expression {
     public:
-        FunctionCallExpression(std::string name, std::vector<std::unique_ptr<Expression>> a);
+        FunctionCallExpression(std::unique_ptr<AST::Expression> f, std::vector<std::unique_ptr<Expression>> a, Symbols::FunctionTable *funcTab) : args(std::move(a)) {
+            if (dynamic_cast<AST::Expression *>(f.get()) == nullptr) {
+                throw std::runtime_error("FunctionCallExpression: callee is not an expression");
+            }
+            callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(dynamic_cast<AST::FunctionNameExpression *>(f.release())));
+            return_type = callee->func->return_type;
+        };
 
-        std::string callee;
+        std::unique_ptr<AST::FunctionNameExpression> callee;
         std::vector<std::unique_ptr<Expression>> args;
+
+        llvm::Type *return_type;
 
         INJECT_ACCEPT();
 
         llvm::Type *type(llvm::LLVMContext *context) override {
-            return llvm::Type::getVoidTy(*context);
+            return return_type;
         };
     };
 
@@ -358,15 +400,15 @@ namespace AST {
      */
     class ArrayIndexingExpression : public AssignableExpression {
     public:
-        ArrayIndexingExpression(std::unique_ptr<VariableExpression> arr, std::vector<std::unique_ptr<Expression>> idx);
+        ArrayIndexingExpression(std::unique_ptr<Expression> arr, std::vector<std::unique_ptr<Expression>> idx);
 
-        std::unique_ptr<VariableExpression> array;
+        std::unique_ptr<Expression> array;
         std::vector<std::unique_ptr<Expression>> index;
 
         INJECT_ACCEPT();
 
         llvm::Type *type(llvm::LLVMContext *context) override {
-            return array->variable->type;
+            return array->type(context)->getPointerTo();
         };
     };
 

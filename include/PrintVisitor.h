@@ -27,6 +27,7 @@ public:
     void visit(const AST::ExternFunction &) override;
     void visit(const AST::StringLiteralExpression &) override;
     void visit(const AST::FloatLiteralExpression &) override;
+    void visit(const AST::FieldAccessExpression &) override {};
 };
 
 #endif //ZUNG_PRINTVISITOR_H

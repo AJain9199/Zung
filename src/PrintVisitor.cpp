@@ -134,7 +134,7 @@ void PrintVisitor::visit(const AST::ArrayIndexingExpression &) {
 void PrintVisitor::visit(const AST::FunctionCallExpression &call) {
     tab_level++;
     INDENT();
-    std::cout << "Function Call Expression" << call.callee <<  std::endl;
+    std::cout << "Function Call Expression" << call.callee->func->name <<  std::endl;
     tab_level--;
 }
 

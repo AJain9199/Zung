@@ -34,9 +34,11 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
     while (lexer.hasMoreTokens()) {
         if (is(FN)) {
             auto f = parseFunction();
+            funcTab_->define(f->prototype->name, f->prototype->return_type);
             translation_unit->functions.push_back(std::move(f));
         } else if (is(EXTERN)) {
             auto f = parseExtern();
+            funcTab_->define(f->name, f->return_type);
             translation_unit->prototypes.push_back(std::move(f));
         } else if (is(STRUCT)) {
             parseStruct();
@@ -159,9 +161,11 @@ std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool *is_va
 std::unique_ptr<AST::CompoundStatement> ParsingEngine::parseCompoundStatement() {
     std::vector<std::unique_ptr<AST::Statement>> statements;
     eat('{');
+
     while (!(is('}') && lexer.get() == PUNCTUATION)) {
-        statements.push_back(parse_statement());
+        statements.push_back(parseStatement());
     }
+
     eat('}');
     return std::make_unique<AST::CompoundStatement>(std::move(statements));
 }
@@ -264,37 +268,12 @@ void ParsingEngine::eat(enum Keyword K) {
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
     std::string name = eat_identifier();
-    if (lexer.get() == PUNCTUATION && lexer.character() == '(') {
-        // parse function call or array access
-        eat('(');
-        std::vector<std::unique_ptr<AST::Expression>> args;
-        while (!is(')')) {
-            args.push_back(parseExpression());
-            if (is(',')) {
-                eat(',');
-            }
-        }
-
-        eat(')');
-
-        return std::make_unique<AST::FunctionCallExpression>(name, std::move(args));
-    } else if (lexer.character() == '[') {
-        eat('[');
-
-        std::vector<std::unique_ptr<AST::Expression>> indices;
-
-        while (!is(']')) {
-            indices.push_back(parseExpression());
-            if (is(',')) {
-                eat(',');
-            }
-        }
-
-        return std::make_unique<AST::ArrayIndexingExpression>(
-                std::make_unique<AST::VariableExpression>(symTab_->find(name)), std::move(indices));
-    } else {
-        return std::make_unique<AST::VariableExpression>(symTab_->find(name));
+    auto s = symTab_->find(name);
+    if (s == nullptr) {
+        return parsePostfix(std::make_unique<AST::FunctionNameExpression>(funcTab_->find(name)));
     }
+
+    return parsePostfix(std::make_unique<AST::VariableExpression>(s));
 }
 
 std::string ParsingEngine::eat_identifier() {
@@ -333,6 +312,54 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseParenthesizedExpression() {
     auto expr = parseExpression();
     eat(')');
     return expr;
+}
+
+std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST::Expression> LHS) {
+    while (true) {
+        if (lexer.get() == PUNCTUATION) {
+            switch (lexer.character()) {
+                case '(': {
+                    eat('(');
+                    std::vector<std::unique_ptr<AST::Expression>> args;
+                    while (!(is(')') && lexer.get() == PUNCTUATION)) {
+                        args.push_back(parseExpression());
+                        if (is(',')) {
+                            eat(',');
+                        }
+                    }
+                    eat(')');
+                    LHS = std::make_unique<AST::FunctionCallExpression>(std::move(LHS), std::move(args), funcTab_);
+                }
+                    break;
+                case '[': {
+                    std::vector<std::unique_ptr<AST::Expression>> indices;
+                    eat('[');
+
+                    while (!is(']')) {
+                        indices.push_back(parseExpression());
+                        if (is(',')) {
+                            eat(',');
+                        }
+                    }
+
+                    LHS = std::make_unique<AST::ArrayIndexingExpression>(std::move(LHS), std::move(indices));
+                }
+                case '.': {
+                    eat('.');
+                    std::string field = eat_identifier();
+                    auto ltype = LHS->type(llvm_context_.get());
+                    int idx = std::find_if(type_table->begin(), type_table->end(), [&ltype](auto &pair) {
+                        return pair.second.type == ltype;
+                    })->second.fields[field];
+                    LHS = std::make_unique<AST::FieldAccessExpression>(std::move(LHS), idx);
+                }
+                default:
+                    return LHS;
+            }
+        } else {
+            return LHS;
+        }
+    }
 }
 
 /* Parses a unary expression of the syntax:
@@ -448,11 +475,11 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseIfStatement() {
     eat('(');
     auto condition = parseExpression();
     eat(')');
-    auto then = parse_statement();
+    auto then = parseStatement();
 
     if (is(ELSE)) {
         eat(ELSE);
-        auto else_stmt = parse_statement();
+        auto else_stmt = parseStatement();
         return std::make_unique<AST::IfStatement>(std::move(condition), std::move(then), std::move(else_stmt));
     } else {
         return std::make_unique<AST::IfStatement>(std::move(condition), std::move(then), nullptr);
@@ -488,7 +515,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement() {
     return std::make_unique<AST::DeclarationStatement>(std::move(init_list));
 }
 
-std::unique_ptr<AST::Statement> ParsingEngine::parse_statement() {
+std::unique_ptr<AST::Statement> ParsingEngine::parseStatement() {
     if (lexer.get() == KEYWORD) {
         if (lexer.keyword() == VAR) {
             return parseDeclarationStatement();
@@ -578,7 +605,7 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseFloatLiteralExpression() {
 std::unique_ptr<AST::Statement> ParsingEngine::parseReturnStatement() {
     eat(RETURN);
     std::unique_ptr<AST::Expression> expr = nullptr;
-    if (!(lexer.get() == PUNCTUATION && is(';'))) {
+    if (!is(';')) {
         expr = parseExpression();
         eat(';');
         return std::make_unique<AST::ReturnStatement>(std::move(expr));
@@ -592,7 +619,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseForStatement() {
     eat(FOR);
 
     eat('(');
-    auto init = parse_statement();
+    auto init = parseStatement();
     auto cond = parseExpression();
     eat(';');
     auto update = parseExpression();

@@ -88,6 +88,8 @@ public:
 
     RETURNS(llvm::ConstantFP *) visit(const AST::FloatLiteralExpression &) override;
 
+    void visit(const AST::FieldAccessExpression &) override;
+
     /* The following methods are used to manage the internal stack of the code generation engine. */
     /*
      * "returns" a value to the stack, by pushing onto it.
@@ -109,6 +111,10 @@ public:
         stack_.pop();
         return val;
     }
+
+    class RvalueCodeGenerationEngine : public AST::ASTVisitor {
+
+    };
 };
 
 #endif //ZUNG_CODEGENERATIONENGINE_H

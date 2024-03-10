@@ -16,13 +16,10 @@ UnaryExpression::UnaryExpression(Operator o, std::unique_ptr<Expression> op) : o
 BinaryExpression::BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs) : LHS(
         std::move(lhs)), op(o), RHS(std::move(rhs)) {}
 
-ArrayIndexingExpression::ArrayIndexingExpression(std::unique_ptr<VariableExpression> arr,
+ArrayIndexingExpression::ArrayIndexingExpression(std::unique_ptr<Expression> arr,
                                                  std::vector<std::unique_ptr<Expression>> idx) : array(std::move(arr)),
                                                                                                  index(std::move(
                                                                                                          idx)) {}
-
-FunctionCallExpression::FunctionCallExpression(std::string name, std::vector<std::unique_ptr<Expression>> a) : callee(
-        std::move(name)), args(std::move(a)) {}
 
 VariableExpression::VariableExpression(SymbolTableEntry *var) : variable(var) {}
 

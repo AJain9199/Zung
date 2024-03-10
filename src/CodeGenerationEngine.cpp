@@ -22,6 +22,18 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             throw std::runtime_error("LHS of assignment must be an assignable expression");
         }
 
+        if (dynamic_cast<AST::FieldAccessExpression *>(expression.LHS.get()) != nullptr) {
+            auto *field = dynamic_cast<AST::FieldAccessExpression *>(expression.LHS.get());
+            if (dynamic_cast<AST::VariableExpression *>(field->struct_.get()) != nullptr) {
+                auto base_struct = symbol_table_[dynamic_cast<AST::VariableExpression *>(field->struct_.get())->variable];
+                auto get_field = builder_->CreateStructGEP(base_struct->getAllocatedType(), base_struct, field->field);
+                expression.RHS->accept(*this);
+                auto *RHS = STACK_GET(Value *);
+                builder_->CreateStore(RHS, get_field);
+                STACK_RET(RHS);
+            }
+        }
+
         Value *LHS = nullptr;
         auto *exp = dynamic_cast<AST::VariableExpression *>(expression.LHS.get());
         if (exp != nullptr) {
@@ -198,7 +210,7 @@ void CodeGenerationEngine::visit(const AST::ExpressionStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) {
-    get_llvm_function(expression.callee);
+    get_llvm_function(expression.callee->func->name);
     auto F = STACK_GET(Function *);
 
     if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
@@ -327,7 +339,6 @@ void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
     auto cond = STACK_GET(Value *);
 
     if (statement.else_body != nullptr) {
-
         auto else_block = BasicBlock::Create(*llvm_context_, "else", builder_->GetInsertBlock()->getParent());
         builder_->CreateCondBr(cond, if_block, else_block);
 
@@ -343,4 +354,22 @@ void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
     }
 
     builder_->SetInsertPoint(exit);
+}
+
+void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
+    if (dynamic_cast<AST::VariableExpression *>(expression.struct_.get()) != nullptr) {
+        auto base_struct = symbol_table_[dynamic_cast<AST::VariableExpression *>(expression.struct_.get())->variable];
+        auto get_field = builder_->CreateStructGEP(base_struct->getAllocatedType(), base_struct, expression.field);
+        STACK_RET(builder_->CreateLoad(base_struct->getAllocatedType()->getStructElementType(expression.field), get_field));
+    }
+
+    expression.struct_->accept(*this);
+    auto base_struct = STACK_GET(Value *);
+    auto type = base_struct->getType();
+    type->print(llvm::errs(), true);
+    auto tmp = create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "", type);
+    builder_->CreateStore(base_struct, tmp);
+
+    auto get_field = builder_->CreateStructGEP(base_struct->getType(), tmp, expression.field);
+    STACK_RET(builder_->CreateLoad(base_struct->getType()->getStructElementType(expression.field), get_field));
 }
