@@ -41,7 +41,7 @@ void PrintVisitor::visit(const AST::FunctionPrototype &prototype) {
 
     for (auto &j : prototype.args) {
         INDENT();
-        std::cout << j->name << " : ";
+        std::cout << j->name() << " : ";
         j->type->print(llvm::errs());
         std::cout << std::endl;
     }
@@ -65,7 +65,7 @@ void PrintVisitor::visit(const AST::DeclarationStatement &stmt) {
 
     for (const auto & it : stmt.init_list) {
         INDENT();
-        std::cout << it.first->name << " = ";
+        std::cout << it.first->name() << " = ";
         it.first->type->print(llvm::errs());
         std::cout << std::endl;
         it.second->accept(*this);
@@ -92,7 +92,7 @@ void PrintVisitor::visit(const AST::IfStatement &) {
 void PrintVisitor::visit(const AST::VariableExpression &expression) {
     tab_level++;
     INDENT();
-    std::cout << "Variable Expression: " << expression.variable->name << std::endl;
+    std::cout << "Variable Expression: " << expression.variable->name() << std::endl;
     tab_level--;
 }
 

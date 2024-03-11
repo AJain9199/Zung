@@ -13,7 +13,7 @@ void CodeGenerationEngine::visit(const AST::IntegralLiteralExpression &expressio
 
 void CodeGenerationEngine::visit(const AST::VariableExpression &expression) {
     auto var = symbol_table_[expression.variable];
-    STACK_RET(builder_->CreateLoad(var->getAllocatedType(), var, expression.variable->name));
+    STACK_RET(builder_->CreateLoad(var->getAllocatedType(), var, expression.variable->name()));
 }
 
 void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
@@ -161,7 +161,7 @@ void CodeGenerationEngine::visit(const AST::FunctionPrototype &prototype) {
 
     i = 0;
     for (auto &arg: F->args()) {
-        arg.setName(prototype.args[i++]->name);
+        arg.setName(prototype.args[i++]->name());
     }
 
     STACK_RET(F);
@@ -183,7 +183,7 @@ void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
         it.second->accept(*this);
         auto *val = STACK_GET(Value *);
 
-        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name, it.first->type);
+        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name(), it.first->type);
         builder_->CreateStore(val, alloca);
         symbol_table_[it.first] = alloca;
     }

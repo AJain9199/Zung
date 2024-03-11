@@ -7,11 +7,16 @@
 #include <variant>
 #include <vector>
 #include <llvm/IR/Type.h>
+#include <BinaryTree.h>
 
 namespace Symbols {
-typedef struct {
+typedef struct sym_t {
     llvm::Type *type;
-    std::string name;
+    std::string n;
+
+    [[nodiscard]] std::string name() const {
+        return n;
+    }
 } SymbolTableEntry;
 
 typedef struct {
@@ -29,8 +34,8 @@ public:
     SymbolTableEntry *define(llvm::Type *type, std::string name, enum VarType varType);
     SymbolTableEntry *find(const std::string& name);
 private:
-    std::vector<SymbolTableEntry *> subroutine_symbols_;
-    std::vector<SymbolTableEntry *> global_symbols_;
+    std::unordered_map<std::string, SymbolTableEntry *> subroutine_symbols_;
+    std::unordered_map<std::string, SymbolTableEntry *> global_symbols_;
 };
 
 class FunctionTable {
