@@ -7,7 +7,6 @@
 #include <variant>
 #include <vector>
 #include <llvm/IR/Type.h>
-#include <BinaryTree.h>
 
 namespace Symbols {
 typedef struct sym_t {
@@ -44,21 +43,16 @@ public:
         auto *entry = new Symbols::FunctionTableEntry();
         entry->name = std::move(name);
         entry->return_type = return_type;
-        function_table_.push_back(entry);
+        function_table_[entry->name] = entry;
         return entry;
     }
 
     Symbols::FunctionTableEntry *find(const std::string& name) {
-        for (auto &entry : function_table_) {
-            if (entry->name == name) {
-                return entry;
-            }
-        }
-        return nullptr;
+        return function_table_[name];
     }
 
 private:
-    std::vector<Symbols::FunctionTableEntry *> function_table_;
+    std::unordered_map<std::string, FunctionTableEntry *> function_table_;
 };
 }
 
