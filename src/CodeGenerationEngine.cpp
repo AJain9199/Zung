@@ -152,10 +152,10 @@ void CodeGenerationEngine::visit(const AST::FunctionPrototype &prototype) {
     std::vector<llvm::Type *> args(prototype.args.size());
     uint i = 0;
     for (const auto &arg: prototype.args) {
-        args[i++] = arg->type;
+        args[i++] = arg->type->type;
     }
 
-    FunctionType *FT = FunctionType::get(prototype.return_type, args, prototype.var_args);
+    FunctionType *FT = FunctionType::get(prototype.return_type->type, args, prototype.var_args);
 
     Function *F = Function::Create(FT, Function::ExternalLinkage, prototype.name, module_.get());
 
@@ -183,7 +183,7 @@ void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
         it.second->accept(*this);
         auto *val = STACK_GET(Value *);
 
-        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name(), it.first->type);
+        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name(), it.first->type->type);
         builder_->CreateStore(val, alloca);
         symbol_table_[it.first] = alloca;
     }
@@ -257,13 +257,20 @@ CodeGenerationEngine::create_entry_block_alloca(llvm::Function *func, const std:
 }
 
 void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
+    if (expression.op == MUL) {
+        expression.operand->accept(*rvalue_engine_);
+        auto *val = STACK_GET(Value *);
+
+        STACK_RET(builder_->CreateLoad(val->getType(), val));
+    }
+
     expression.operand->accept(*this);
     auto *val = STACK_GET(Value *);
+
+    val->getType()->print(llvm::errs(), true);
     switch (expression.op) {
         case SUB:
         STACK_RET(builder_->CreateNeg(val));
-        case MUL:
-        STACK_RET(builder_->CreateLoad(val->getType(), val));
         case AND: {
             if (dynamic_cast<AST::VariableExpression *>(expression.operand.get()) != nullptr) {
                 STACK_RET(symbol_table_[dynamic_cast<AST::VariableExpression *>(expression.operand.get())->variable]);
@@ -283,10 +290,10 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
     std::vector<llvm::Type *> args(function.args.size());
     uint i = 0;
     for (const auto &arg: function.args) {
-        args[i++] = arg;
+        args[i++] = arg->type;
     }
 
-    FunctionType *FT = FunctionType::get(function.return_type, args, function.is_var_args);
+    FunctionType *FT = FunctionType::get(function.return_type->type, args, function.is_var_args);
     Function *F = Function::Create(FT, Function::ExternalLinkage, function.name, module_.get());
 
     STACK_RET(F);
@@ -345,16 +352,15 @@ void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
     if (expression.struct_->assignable()) {
         expression.struct_->accept(*rvalue_engine_);
         base_struct = STACK_GET(llvm::Value *);
-        auto get_field = builder_->CreateStructGEP(base_struct->getType(), base_struct, expression.field);
-        STACK_RET(builder_->CreateLoad(base_struct->getType()->getStructElementType(expression.field), get_field));
+        base_struct->getType()->print(llvm::errs(), true);
+        auto get_field = builder_->CreateStructGEP(expression.struct_->type(llvm_context_.get())->type, base_struct, expression.field.idx);
+        STACK_RET(builder_->CreateLoad(expression.struct_->type(llvm_context_.get())->type->getStructElementType(expression.field.idx), get_field));
     } else {
         expression.struct_->accept(*this);
         auto *struct_ptr = STACK_GET(llvm::Value *);
-        auto type = struct_ptr->getType();
-        auto tmp = CodeGenerationEngine::create_entry_block_alloca(builder_->GetInsertBlock()->getParent(), "", type);
-        builder_->CreateStore(struct_ptr, tmp);
+        auto type = expression.struct_->type(llvm_context_.get())->type;
 
-        auto get_field = builder_->CreateStructGEP(tmp->getAllocatedType(), tmp, expression.field);
-        STACK_RET(builder_->CreateLoad(tmp->getAllocatedType()->getStructElementType(expression.field), get_field));
+        auto get_field = builder_->CreateStructGEP(type, struct_ptr, expression.field.idx);
+        STACK_RET(builder_->CreateLoad(type->getStructElementType(expression.field.idx), get_field));
     }
 }

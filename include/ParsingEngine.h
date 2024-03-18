@@ -5,14 +5,7 @@
 #include <AST.h>
 #include <llvm/IR/Type.h>
 #include "llvm/IR/LLVMContext.h"
-
-/*
- * Stores information about the structural aggregate types.
- */
-struct TypeInfo {
-    llvm::Type *type;
-    std::map<std::string, int> fields;
-};
+#include <Types.h>
 
 /*
  * The parsing engine is responsible for parsing the input file and constructing the Abstract Syntax Tree (AST) from the
@@ -36,6 +29,7 @@ public:
     }
 private:
     Lexer lexer;
+    llvm::StructType *currentStruct{nullptr};
 
     std::map<std::string, struct TypeInfo> *type_table;
 
@@ -43,10 +37,11 @@ private:
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
     std::vector<Symbols::SymbolTableEntry *> parseArgList(bool *is_var_args=nullptr);
     std::unique_ptr<AST::ExternFunction> parseExtern();
-    void parseStruct();
+    std::unique_ptr<AST::Function> parseMethod();
+    std::vector<std::unique_ptr<AST::Function>> parseStruct();
 
 
-    llvm::Type *parseType();
+    TypeWrapper * parseType();
 
     /* Parse expressions */
     std::unique_ptr<AST::Expression> parseNumericLiteralExpression();

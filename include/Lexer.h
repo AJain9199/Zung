@@ -9,7 +9,7 @@ enum TokenType {
     DEFAULT_TYPE,
     DECLARATION_SPECIFIER,
 
-    IDENTIFIER, // name not beginning with a digit
+    IDENTIFIER, // internal_name not beginning with a digit
 
     /* literals */
     NUMERIC_LITERAL, // [0-9]+

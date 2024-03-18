@@ -11,10 +11,12 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/DerivedTypes.h>
+#include "Types.h"
 
 #define INJECT_ACCEPT() void accept(ASTVisitor &v) override { v.visit(*this); }
 
 struct TypeInfo;
+struct FieldInfo;
 
 /*
  * Contains all the AST nodes and the abstract visitor class.
@@ -36,6 +38,7 @@ namespace AST {
     class CompoundStatement;
 
     class ReturnStatement;
+
     class ForStatement;
 
     class DeclarationStatement;
@@ -143,12 +146,12 @@ namespace AST {
     class ExternFunction : public AbstractNode {
     public:
         std::string name;
-        std::vector<llvm::Type *> args;
-        llvm::Type *return_type;
+        std::vector<TypeWrapper *> args;
+        TypeWrapper *return_type;
 
         bool is_var_args = false;
 
-        ExternFunction(std::string name, std::vector<llvm::Type *> args, llvm::Type *return_type, bool va) : name(
+        ExternFunction(std::string name, std::vector<TypeWrapper *> args, TypeWrapper *return_type, bool va) : name(
                 std::move(name)), args(std::move(args)), return_type(return_type), is_var_args(va) {}
 
         INJECT_ACCEPT();
@@ -172,16 +175,16 @@ namespace AST {
 
     /*
      * Represents the function signature
-     * name(args) : return_type
+     * internal_name(args) : return_type
      */
     class FunctionPrototype : public AbstractNode {
     public:
-        FunctionPrototype(std::string n, const std::vector<Symbols::SymbolTableEntry *> &a, llvm::Type *ret, bool va);
+        FunctionPrototype(std::string n, const std::vector<Symbols::SymbolTableEntry *> &a, TypeWrapper *ret, bool va);
 
         std::string name;
         std::vector<Symbols::SymbolTableEntry *> args;
         bool var_args = false;
-        llvm::Type *return_type;
+        TypeWrapper *return_type;
 
         INJECT_ACCEPT();
     };
@@ -255,7 +258,9 @@ namespace AST {
         std::unique_ptr<Expression> update;
         std::unique_ptr<CompoundStatement> body;
 
-        ForStatement(std::unique_ptr<Statement> i, std::unique_ptr<Expression> cond, std::unique_ptr<Expression> up, std::unique_ptr<CompoundStatement> b) : init(std::move(i)), condition(std::move(cond)), update(std::move(up)), body(std::move(b)) {};
+        ForStatement(std::unique_ptr<Statement> i, std::unique_ptr<Expression> cond, std::unique_ptr<Expression> up,
+                     std::unique_ptr<CompoundStatement> b) : init(std::move(i)), condition(std::move(cond)),
+                                                             update(std::move(up)), body(std::move(b)) {};
 
         INJECT_ACCEPT();
     };
@@ -269,7 +274,8 @@ namespace AST {
         std::unique_ptr<Statement> body;
         std::unique_ptr<Statement> else_body;
 
-        IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<Statement> b, std::unique_ptr<Statement> e) : condition(std::move(cond)), body(std::move(b)), else_body(std::move(e)) {};
+        IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<Statement> b, std::unique_ptr<Statement> e)
+                : condition(std::move(cond)), body(std::move(b)), else_body(std::move(e)) {};
 
         INJECT_ACCEPT();
     };
@@ -280,7 +286,7 @@ namespace AST {
      */
     class Expression : public AbstractNode {
     public:
-        virtual llvm::Type *type(llvm::LLVMContext *) = 0;
+        virtual TypeWrapper *type(llvm::LLVMContext *) = 0;
 
         virtual bool assignable() {
             return false;
@@ -293,7 +299,7 @@ namespace AST {
      */
     class AssignableExpression : public Expression {
     public:
-        llvm::Type *type(llvm::LLVMContext *) override = 0;
+        TypeWrapper *type(llvm::LLVMContext *) override = 0;
 
         bool assignable() override {
             return true;
@@ -308,8 +314,23 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
-            return llvm::FunctionType::get(llvm::Type::getVoidTy(*context), false);
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return nullptr;
+        };
+    };
+
+    class MethodNameExpression : public Expression {
+    public:
+        MethodNameExpression(std::unique_ptr<Expression> base, Symbols::FunctionTableEntry *name) : struct_(
+                std::move(base)), internal_name(name) {};
+
+        std::unique_ptr<Expression> struct_;
+        Symbols::FunctionTableEntry *internal_name;
+
+        INJECT_ACCEPT();
+
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return nullptr;
         };
     };
 
@@ -324,8 +345,8 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
-            return llvm::Type::getDoubleTy(*context);
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return new TypeWrapper(llvm::Type::getDoubleTy(*context));
         };
     };
 
@@ -340,8 +361,8 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
-            return llvm::Type::getInt32Ty(*context);
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return new TypeWrapper(llvm::Type::getInt32Ty(*context));
         };
     };
 
@@ -356,7 +377,7 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
+        TypeWrapper *type(llvm::LLVMContext *context) override {
             return variable->type;
         };
     };
@@ -366,39 +387,81 @@ namespace AST {
      */
     class FieldAccessExpression : public AssignableExpression {
     public:
-        FieldAccessExpression(std::unique_ptr<AST::Expression> s, int f) : struct_(std::move(s)) , field(f) {};
+        FieldAccessExpression(std::unique_ptr<AST::Expression> s, FieldInfo f) : struct_(std::move(s)), field(f) {};
 
         std::unique_ptr<AST::Expression> struct_;
-        int field;
+        FieldInfo field;
 
         INJECT_ACCEPT();
 
-        llvm::Type * type(llvm::LLVMContext *ctx) override {
-            return struct_->type(ctx)->getStructElementType(field);
+        TypeWrapper *type(llvm::LLVMContext *ctx) override {
+            return field.type;
         }
     };
 
     /*
+     * A unary expression with an operator and an operand.
+     */
+    class UnaryExpression : public Expression {
+    public:
+        UnaryExpression(Operator o, std::unique_ptr<Expression> op);
+
+        Operator op;
+        std::unique_ptr<Expression> operand;
+
+        INJECT_ACCEPT();
+
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            auto optype = operand->type(context);
+
+            if (op == Operator::AND) {
+                return new TypeWrapper(llvm::PointerType::get(*context, 0), optype);
+            }
+
+            if (op == Operator::MUL) {
+                return optype->pointee_type;
+            }
+
+            if (optype->type->isIntegerTy()) {
+                if (op == Operator::SUB) {
+                    return optype;
+                }
+            } else if (optype->type->isFloatTy()) {
+                return optype;
+            }
+            return nullptr;
+        };
+    };
+    /*
      * A function call expression. It may or may not have arguments.
      */
+
     class FunctionCallExpression : public Expression {
     public:
-        FunctionCallExpression(std::unique_ptr<AST::Expression> f, std::vector<std::unique_ptr<Expression>> a, Symbols::FunctionTable *funcTab) : args(std::move(a)) {
+        FunctionCallExpression(std::unique_ptr<AST::Expression> f, std::vector<std::unique_ptr<Expression>> a,
+                               Symbols::FunctionTable *funcTab) : args(std::move(a)) {
             if (dynamic_cast<AST::Expression *>(f.get()) == nullptr) {
                 throw std::runtime_error("FunctionCallExpression: callee is not an expression");
+            } else if (dynamic_cast<AST::MethodNameExpression *>(f.get()) != nullptr) {
+                auto *m = dynamic_cast<AST::MethodNameExpression *>(f.get());
+                callee = std::make_unique<AST::FunctionNameExpression>(m->internal_name);
+                std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(Operator::AND, std::move(m->struct_));
+                args.insert(args.begin(), std::move(base));
+            } else {
+                callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(
+                        dynamic_cast<AST::FunctionNameExpression *>(f.release())));
             }
-            callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(dynamic_cast<AST::FunctionNameExpression *>(f.release())));
             return_type = callee->func->return_type;
         };
 
         std::unique_ptr<AST::FunctionNameExpression> callee;
         std::vector<std::unique_ptr<Expression>> args;
 
-        llvm::Type *return_type;
+        TypeWrapper *return_type;
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
+        TypeWrapper *type(llvm::LLVMContext *context) override {
             return return_type;
         };
     };
@@ -415,8 +478,8 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
-            return array->type(context)->getPointerTo();
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return array->type(context)->pointee_type;
         };
     };
 
@@ -433,7 +496,7 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
+        TypeWrapper *type(llvm::LLVMContext *context) override {
             auto ltype = LHS->type(context);
             auto rtype = RHS->type(context);
 
@@ -449,29 +512,29 @@ namespace AST {
                 return ltype;
             }
 
-            if (ltype->isIntegerTy()) {
+            if (ltype->type->isIntegerTy()) {
                 if (op == Operator::ADD || op == Operator::SUB || op == Operator::MUL || op == Operator::FLR ||
                     op == Operator::MOD) {
-                    if (rtype->isIntegerTy()) {
-                        return rtype->getIntegerBitWidth() > ltype->getIntegerBitWidth() ? rtype : ltype;
-                    } else if (rtype->isFloatTy()) {
+                    if (rtype->type->isIntegerTy()) {
+                        return rtype->type->getIntegerBitWidth() > ltype->type->getIntegerBitWidth() ? rtype : ltype;
+                    } else if (rtype->type->isFloatTy()) {
                         return rtype;
                     }
                 } else if (op == Operator::DIV) {
-                    return llvm::Type::getFloatTy(*context);
+                    return new TypeWrapper(llvm::Type::getFloatTy(*context));
                 }
             }
 
-            if (ltype->isFloatTy() || rtype->isFloatTy()) {
+            if (ltype->type->isFloatTy() || rtype->type->isFloatTy()) {
                 return ltype;
             }
 
             if (op == Operator::EQ || op == Operator::NEQ || op == Operator::LE || op == Operator::GE ||
                 op == Operator::LEQ || op == Operator::GEQ) {
-                return llvm::Type::getInt1Ty(*context);
+                return new TypeWrapper(llvm::Type::getInt1Ty(*context));
             }
 
-            if (ltype->isPointerTy() || rtype->isPointerTy()) {
+            if (ltype->type->isPointerTy() || rtype->type->isPointerTy()) {
                 return ltype;
             }
 
@@ -479,39 +542,6 @@ namespace AST {
         }
     };
 
-    /*
-     * A unary expression with an operator and an operand.
-     */
-    class UnaryExpression : public Expression {
-    public:
-        UnaryExpression(Operator o, std::unique_ptr<Expression> op);
-
-        Operator op;
-        std::unique_ptr<Expression> operand;
-
-        INJECT_ACCEPT();
-
-        llvm::Type *type(llvm::LLVMContext *context) override {
-            auto optype = operand->type(context);
-
-            if (op == Operator::AND) {
-                return optype->getPointerTo();
-            }
-
-            if (op == Operator::MUL) {
-                return nullptr;
-            }
-
-            if (optype->isIntegerTy()) {
-                if (op == Operator::SUB) {
-                    return optype;
-                }
-            } else if (optype->isFloatTy()) {
-                return optype;
-            }
-            return nullptr;
-        };
-    };
 
     /*
      * A string literal expression. Represents a char*.
@@ -524,8 +554,9 @@ namespace AST {
 
         INJECT_ACCEPT();
 
-        llvm::Type *type(llvm::LLVMContext *context) override {
-            return llvm::Type::getInt8Ty(*context)->getPointerTo();
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return new TypeWrapper(llvm::PointerType::get(*context, 0),
+                                   new TypeWrapper(llvm::Type::getInt8Ty(*context)));
         };
     };
 }

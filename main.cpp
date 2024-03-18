@@ -6,18 +6,6 @@
 #include <chrono>
 
 int main() {
-    auto lex_pre = std::chrono::high_resolution_clock::now();
-    Lexer lex("../test.zng");
-
-    while (lex.hasMoreTokens()) {
-        auto token = lex.get();
-        std::cout << token << std::endl;
-        lex.advance();
-    }
-
-    auto lex_post = std::chrono::high_resolution_clock::now();
-    std::cout << "Lexing took " << std::chrono::duration_cast<std::chrono::milliseconds>(lex_post - lex_pre).count() << "ms" << std::endl;
-
     auto parse_pre = std::chrono::high_resolution_clock::now();
 
     std::unique_ptr<llvm::LLVMContext> context = std::make_unique<llvm::LLVMContext>();
@@ -40,5 +28,5 @@ int main() {
     p->accept(cge);
     auto codegen_post = std::chrono::high_resolution_clock::now();
     std::cout << "Code generation took " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - codegen_pre).count() << "ms" << std::endl;
-    std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - lex_pre).count() << "ms" << std::endl;
+    std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - parse_pre).count() << "ms" << std::endl;
 }

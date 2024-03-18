@@ -2,7 +2,7 @@
 
 using namespace Symbols;
 
-SymbolTableEntry *SymbolTable::define(llvm::Type *type, std::string name, enum VarType varType) {
+SymbolTableEntry *SymbolTable::define(TypeWrapper *type, std::string name, enum VarType varType) {
     auto *entry = new SymbolTableEntry();
 
     entry->n = name;

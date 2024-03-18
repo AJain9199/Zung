@@ -41,7 +41,12 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
             funcTab_->define(f->name, f->return_type);
             translation_unit->prototypes.push_back(std::move(f));
         } else if (is(STRUCT)) {
-            parseStruct();
+            auto methods = std::move(parseStruct());
+            translation_unit->functions.reserve(
+                    translation_unit->functions.size() + std::distance(methods.begin(), methods.end()));
+            translation_unit->functions.insert(translation_unit->functions.end(),
+                                               std::make_move_iterator(methods.begin()),
+                                               std::make_move_iterator(methods.end()));
         } else {
             std::cerr << "Unexpected token" << std::endl;
         }
@@ -53,7 +58,7 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
 std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
     eat(EXTERN);
     std::string id = eat_identifier();
-    std::vector<llvm::Type *> args = {};
+    std::vector<TypeWrapper *> args = {};
     bool va = false;
 
     eat('(');
@@ -64,7 +69,7 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
             break;
         }
 
-        llvm::Type *type = parseType();
+        TypeWrapper *type = parseType();
         std::string name = eat_identifier();
 
         args.push_back(type);
@@ -75,12 +80,12 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
         eat(',');
     }
     eat(')');
-    llvm::Type *return_type;
+    TypeWrapper *return_type;
     if (is(':')) {
         lexer.advance();
         return_type = parseType();
     } else {
-        return_type = llvm::Type::getVoidTy(*llvm_context_);
+        return_type = new TypeWrapper(llvm::Type::getVoidTy(*llvm_context_));
     }
     eat(';');
     return std::make_unique<AST::ExternFunction>(id, args, return_type, va);
@@ -101,12 +106,12 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
 
     auto args = parseArgList(&var_args);
 
-    llvm::Type *return_type;
+    TypeWrapper *return_type;
     if (is(':')) {
         lexer.advance();
         return_type = parseType();
     } else {
-        return_type = llvm::Type::getVoidTy(*llvm_context_);
+        return_type = new TypeWrapper(llvm::Type::getVoidTy(*llvm_context_));
     }
 
     if (is(';')) {
@@ -141,7 +146,7 @@ std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool *is_va
             break;
         }
 
-        llvm::Type *type = parseType();
+        TypeWrapper *type = parseType();
         std::string name = eat_identifier();
 
         args.push_back(symTab_->define(type, name, Symbols::LOCAL));
@@ -210,7 +215,7 @@ auto ParsingEngine::is(Tokens... tokens) {
     return (TokenType) NULL;
 }
 
-llvm::Type *ParsingEngine::parseType() {
+TypeWrapper *ParsingEngine::parseType() {
     static std::regex type_regex("i(\\d+)");
 
     llvm::Type *basic_type;
@@ -241,14 +246,15 @@ llvm::Type *ParsingEngine::parseType() {
         }
     }
 
+    auto wrapper = new TypeWrapper(basic_type);
     if (is(MUL)) {
         while (is(MUL)) {
             lexer.advance();
-            basic_type = llvm::PointerType::get(basic_type, 0);
+            wrapper = TypeWrapper::getPointerTo(wrapper);
         }
     }
 
-    return basic_type;
+    return wrapper;
 }
 
 void ParsingEngine::eat(enum Keyword K) {
@@ -270,10 +276,17 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
     std::string name = eat_identifier();
     auto s = symTab_->find(name);
     if (s == nullptr) {
-        return parsePostfix(std::make_unique<AST::FunctionNameExpression>(funcTab_->find(name)));
+        auto typeinfo = (*type_table)[currentStruct->getStructName().str()].fields;
+        if (typeinfo.find(name) != typeinfo.end()) {
+            return std::make_unique<AST::FieldAccessExpression>(std::make_unique<AST::VariableExpression>(
+                                                                                     symTab_->find(
+                                                                                             "this")),
+                                                                             typeinfo[name]);
+        }
+        return std::make_unique<AST::FunctionNameExpression>(funcTab_->find(name));
     }
 
-    return parsePostfix(std::make_unique<AST::VariableExpression>(s));
+    return std::make_unique<AST::VariableExpression>(s);
 }
 
 std::string ParsingEngine::eat_identifier() {
@@ -347,11 +360,16 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                 case '.': {
                     eat('.');
                     std::string field = eat_identifier();
-                    auto ltype = LHS->type(llvm_context_.get());
-                    int idx = std::find_if(type_table->begin(), type_table->end(), [&ltype](auto &pair) {
-                        return pair.second.type == ltype;
-                    })->second.fields[field];
-                    LHS = std::make_unique<AST::FieldAccessExpression>(std::move(LHS), idx);
+                    auto ltype = LHS->type(llvm_context_.get())->type->getStructName();
+                    auto type_info = (*type_table)[ltype.str()];
+                    if (type_info.fields.find(field) != type_info.fields.end()) {
+                        auto f = (*type_table)[ltype.str()].fields[field];
+                        LHS = std::make_unique<AST::FieldAccessExpression>(std::move(LHS), f);
+                    } else {
+                        LHS = std::make_unique<AST::MethodNameExpression>(std::move(LHS), type_info.methods[field]);
+                    }
+
+                    break;
                 }
                 default:
                     return LHS;
@@ -450,21 +468,29 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseExpressionStatement() {
  * parenthesized_expression
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
+    std::unique_ptr<AST::Expression> expr = nullptr;
     switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL, FLOAT_LITERAL)) {
         case NUMERIC_LITERAL:
-            return parseNumericLiteralExpression();
+            expr = parseNumericLiteralExpression();
+            break;
         case STR_LITERAL:
-            return parseStringLiteralExpression();
+            expr = parseStringLiteralExpression();
+            break;
         case IDENTIFIER:
-            return parseIdentifierExpression();
+            expr = parseIdentifierExpression();
+            break;
         case PUNCTUATION:
-            return parseParenthesizedExpression();
+            expr = parseParenthesizedExpression();
+            break;
         case FLOAT_LITERAL:
-            return parseFloatLiteralExpression();
+            expr = parseFloatLiteralExpression();
+            break;
         default:
             std::cerr << "Unexpected token";
             return nullptr;
     }
+
+    return parsePostfix(std::move(expr));
 }
 
 /* Parses a basic if statement of the syntax:
@@ -493,7 +519,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement() {
     eat(VAR);
 
     std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
-    llvm::Type *type = parseType();
+    TypeWrapper *type = parseType();
 
     while (true) {
         std::string name = eat_identifier();
@@ -550,10 +576,13 @@ bool ParsingEngine::is(enum Operator op) {
     return lexer.get() == OP && lexer.operator_token() == op;
 }
 
-void ParsingEngine::parseStruct() {
+std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
     eat(STRUCT);
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);
+
+    currentStruct = t;
+
     (*type_table)[id] = (struct TypeInfo) {t, {}};
     bool packed = false;
 
@@ -564,12 +593,23 @@ void ParsingEngine::parseStruct() {
 
     eat('{');
     std::vector<llvm::Type *> members;
+    std::vector<std::unique_ptr<AST::Function>> methods;
     int i = 0;
     while (!is('}')) {
-        llvm::Type *type = parseType();
+        if (is(FN)) {
+            auto f = parseMethod();
+            std::string func_name = f->prototype->name;
+            f->prototype->name = id + "_" + f->prototype->name;
+            auto func = funcTab_->define(f->prototype->name, f->prototype->return_type);
+            (*type_table)[id].methods[func_name] = func;
+            methods.push_back(std::move(f));
+            continue;
+        }
+
+        TypeWrapper *type = parseType();
         std::string name = eat_identifier();
-        (*type_table)[id].fields[name] = i++;
-        members.push_back(type);
+        (*type_table)[id].fields[name] = {i++, type};
+        members.push_back(type->type);
 
         if (!is(';')) {
             break;
@@ -578,6 +618,7 @@ void ParsingEngine::parseStruct() {
     }
     eat('}');
     t->setBody(members, packed);
+    return methods;
 }
 
 std::unique_ptr<AST::Expression> ParsingEngine::parseStringLiteralExpression() {
@@ -628,4 +669,42 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseForStatement() {
     auto body = parseCompoundStatement();
 
     return std::make_unique<AST::ForStatement>(std::move(init), std::move(cond), std::move(update), std::move(body));
+}
+
+std::unique_ptr<AST::Function> ParsingEngine::parseMethod() {
+    eat(FN);
+    std::string id = eat_identifier();
+
+    auto *sym = new Symbols::SymbolTable();
+    symTab_ = sym;
+
+    auto this_ = sym->define(TypeWrapper::getPointerTo(new TypeWrapper(currentStruct)), "this", Symbols::LOCAL);
+
+    bool var_args = false;
+
+    auto args = parseArgList(&var_args);
+    args.insert(args.begin(), this_);
+
+    TypeWrapper *return_type;
+    if (is(':')) {
+        lexer.advance();
+        return_type = parseType();
+    } else {
+        return_type = new TypeWrapper(llvm::Type::getVoidTy(*llvm_context_));
+    }
+
+    if (is(';')) {
+        eat(';');
+        return std::make_unique<AST::Function>(
+                std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
+                nullptr);
+    }
+
+    auto body = parseCompoundStatement();
+
+    auto func = std::make_unique<AST::Function>(
+            std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
+            std::move(body));
+    func->symbol_table = sym;
+    return func;
 }

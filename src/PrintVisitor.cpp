@@ -42,7 +42,7 @@ void PrintVisitor::visit(const AST::FunctionPrototype &prototype) {
     for (auto &j : prototype.args) {
         INDENT();
         std::cout << j->name() << " : ";
-        j->type->print(llvm::errs());
+        j->type->type->print(llvm::errs());
         std::cout << std::endl;
     }
     tab_level--;
@@ -66,7 +66,7 @@ void PrintVisitor::visit(const AST::DeclarationStatement &stmt) {
     for (const auto & it : stmt.init_list) {
         INDENT();
         std::cout << it.first->name() << " = ";
-        it.first->type->print(llvm::errs());
+        it.first->type->type->print(llvm::errs());
         std::cout << std::endl;
         it.second->accept(*this);
     }

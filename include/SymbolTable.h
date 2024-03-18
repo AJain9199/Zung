@@ -7,10 +7,11 @@
 #include <variant>
 #include <vector>
 #include <llvm/IR/Type.h>
+#include "Types.h"
 
 namespace Symbols {
 typedef struct sym_t {
-    llvm::Type *type;
+    TypeWrapper *type;
     std::string n;
 
     [[nodiscard]] std::string name() const {
@@ -20,7 +21,7 @@ typedef struct sym_t {
 
 typedef struct {
     std::string name;
-    llvm::Type *return_type;
+    TypeWrapper *return_type;
 } FunctionTableEntry;
 
 enum VarType {
@@ -30,7 +31,7 @@ enum VarType {
 
 class SymbolTable {
 public:
-    SymbolTableEntry *define(llvm::Type *type, std::string name, enum VarType varType);
+    SymbolTableEntry *define(TypeWrapper *type, std::string name, enum VarType varType);
     SymbolTableEntry *find(const std::string& name);
 private:
     std::unordered_map<std::string, SymbolTableEntry *> subroutine_symbols_;
@@ -39,7 +40,7 @@ private:
 
 class FunctionTable {
 public:
-    Symbols::FunctionTableEntry *define(std::string name, llvm::Type *return_type) {
+    Symbols::FunctionTableEntry *define(std::string name, TypeWrapper *return_type) {
         auto *entry = new Symbols::FunctionTableEntry();
         entry->name = std::move(name);
         entry->return_type = return_type;
@@ -56,5 +57,19 @@ private:
 };
 }
 
+/* Stores information about the fields of a struct */
+typedef struct FieldInfo {
+    int idx;
+    TypeWrapper *type;
+} FieldInfo;
+
+/*
+ * Stores information about the structural aggregate types.
+ */
+struct TypeInfo {
+    llvm::Type *type;
+    std::map<std::string, FieldInfo> fields;
+    std::map<std::string, Symbols::FunctionTableEntry *> methods;
+};
 
 #endif //ZUNG_SYMBOLTABLE_H

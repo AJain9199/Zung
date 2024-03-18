@@ -4,9 +4,9 @@
 using namespace AST;
 using namespace Symbols;
 
-FunctionPrototype::FunctionPrototype(std::string n, const std::vector<SymbolTableEntry *> &a, llvm::Type *ret, bool va) : name(
+FunctionPrototype::FunctionPrototype(std::string n, const std::vector<SymbolTableEntry *> &a, TypeWrapper *ret, bool va) : name(
         std::move(n)), args(a),
-                                                                                                          return_type(ret), var_args(va) {}
+                                                                                                                           return_type(ret), var_args(va) {}
 
 Function::Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<CompoundStatement> stmt) : prototype(
         std::move(proto)), body(std::move(stmt)) {}
