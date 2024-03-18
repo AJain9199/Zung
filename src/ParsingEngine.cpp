@@ -242,7 +242,7 @@ TypeWrapper *ParsingEngine::parseType() {
             int width = std::stoi(id.substr(1));
             basic_type = llvm::Type::getIntNTy(*llvm_context_, width);
         } else {
-            basic_type = (*type_table)[id].type;
+            basic_type =  (*type_table)[id]->type;
         }
     }
 
@@ -276,7 +276,7 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
     std::string name = eat_identifier();
     auto s = symTab_->find(name);
     if (s == nullptr) {
-        auto typeinfo = (*type_table)[currentStruct->getStructName().str()].fields;
+        auto typeinfo = (*type_table)[currentStruct->getStructName().str()]->fields;
         if (typeinfo.find(name) != typeinfo.end()) {
             return std::make_unique<AST::FieldAccessExpression>(std::make_unique<AST::VariableExpression>(
                                                                                      symTab_->find(
@@ -362,11 +362,11 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                     std::string field = eat_identifier();
                     auto ltype = LHS->type(llvm_context_.get())->type->getStructName();
                     auto type_info = (*type_table)[ltype.str()];
-                    if (type_info.fields.find(field) != type_info.fields.end()) {
-                        auto f = (*type_table)[ltype.str()].fields[field];
+                    if (type_info->fields.find(field) != type_info->fields.end()) {
+                        auto f = (*type_table)[ltype.str()]->fields[field];
                         LHS = std::make_unique<AST::FieldAccessExpression>(std::move(LHS), f);
                     } else {
-                        LHS = std::make_unique<AST::MethodNameExpression>(std::move(LHS), type_info.methods[field]);
+                        LHS = std::make_unique<AST::MethodNameExpression>(std::move(LHS), type_info->methods[field]);
                     }
 
                     break;
@@ -583,7 +583,7 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
 
     currentStruct = t;
 
-    (*type_table)[id] = (struct TypeInfo) {t, {}};
+    (*type_table)[id] = new (struct TypeInfo) {t, {}};
     bool packed = false;
 
     if (is(PACKED)) {
@@ -601,14 +601,14 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
             std::string func_name = f->prototype->name;
             f->prototype->name = id + "_" + f->prototype->name;
             auto func = funcTab_->define(f->prototype->name, f->prototype->return_type);
-            (*type_table)[id].methods[func_name] = func;
+            (*type_table)[id]->methods[func_name] = func;
             methods.push_back(std::move(f));
             continue;
         }
 
         TypeWrapper *type = parseType();
         std::string name = eat_identifier();
-        (*type_table)[id].fields[name] = {i++, type};
+        (*type_table)[id]->fields[name] = {i++, type};
         members.push_back(type->type);
 
         if (!is(';')) {

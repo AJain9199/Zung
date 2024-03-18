@@ -135,7 +135,7 @@ namespace AST {
         std::vector<std::unique_ptr<Function>> functions;
         std::vector<std::unique_ptr<ExternFunction>> prototypes;
 
-        std::map<std::string, struct TypeInfo> type_table;
+        std::map<std::string, struct TypeInfo *> type_table;
 
         INJECT_ACCEPT();
     };
@@ -153,6 +153,13 @@ namespace AST {
 
         ExternFunction(std::string name, std::vector<TypeWrapper *> args, TypeWrapper *return_type, bool va) : name(
                 std::move(name)), args(std::move(args)), return_type(return_type), is_var_args(va) {}
+
+        ~ExternFunction() override {
+            delete return_type;
+            for (auto &arg : args) {
+                delete arg;
+            }
+        }
 
         INJECT_ACCEPT();
     };
@@ -187,6 +194,10 @@ namespace AST {
         TypeWrapper *return_type;
 
         INJECT_ACCEPT();
+
+        ~FunctionPrototype() override {
+            delete return_type;
+        }
     };
 
     /*

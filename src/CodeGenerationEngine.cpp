@@ -112,8 +112,7 @@ STACK_RET(builder_->CreateCmp(icmp, LHS, RHS, "tmp"));
 
 void CodeGenerationEngine::visit(const AST::Function &function) {
     AST::FunctionPrototype &P = *(function.prototype);
-    function_table_.insert<func_table_t::value_type>(
-            func_table_t::value_type(P.name, std::make_unique<AST::FunctionPrototype>(P)));
+    function_table_[P.name] = function.prototype.get();
 
     get_llvm_function(P.name);
     auto *F = STACK_GET(Function *);
@@ -141,6 +140,8 @@ void CodeGenerationEngine::visit(const AST::Function &function) {
     verifyFunction(*F);
 
     /* TODO: optimizer pass */
+
+    delete function.symbol_table;
 
     STACK_RET(F);
 }

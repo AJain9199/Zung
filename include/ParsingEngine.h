@@ -16,7 +16,7 @@
 class ParsingEngine {
 public:
     explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {
-        type_table = new std::map<std::string, struct TypeInfo>();
+        type_table = new std::map<std::string, struct TypeInfo *>();
         funcTab_ = new Symbols::FunctionTable();
         lexer.advance();
     }
@@ -27,11 +27,20 @@ public:
     void get_context(std::unique_ptr<llvm::LLVMContext> &context) {
         context = std::move(llvm_context_);
     }
+
+    ~ParsingEngine() {
+        for (auto &i: *type_table) {
+            delete i.second;
+        }
+
+        delete type_table;
+        delete funcTab_;
+    }
 private:
     Lexer lexer;
     llvm::StructType *currentStruct{nullptr};
 
-    std::map<std::string, struct TypeInfo> *type_table;
+    std::map<std::basic_string<char>, TypeInfo *> *type_table;
 
     std::unique_ptr<AST::Function> parseFunction();
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();

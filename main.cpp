@@ -26,6 +26,7 @@ int main() {
     auto codegen_pre = std::chrono::high_resolution_clock::now();
     CodeGenerationEngine cge(std::move(context));
     p->accept(cge);
+    delete p;
     auto codegen_post = std::chrono::high_resolution_clock::now();
     std::cout << "Code generation took " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - codegen_pre).count() << "ms" << std::endl;
     std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - parse_pre).count() << "ms" << std::endl;

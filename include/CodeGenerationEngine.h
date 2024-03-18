@@ -23,7 +23,7 @@
  * */
 #define RETURNS(x) void
 
-typedef std::map<std::string, std::unique_ptr<AST::FunctionPrototype>> func_table_t;
+typedef std::map<std::string, AST::FunctionPrototype*> func_table_t;
 
 class CodeGenerationEngine;
 
@@ -166,6 +166,10 @@ public:
         auto val = (T) (stack_.top());
         stack_.pop();
         return val;
+    }
+
+    ~CodeGenerationEngine() {
+        delete rvalue_engine_;
     }
 };
 
