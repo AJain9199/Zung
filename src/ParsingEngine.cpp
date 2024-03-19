@@ -94,7 +94,7 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
 /* Parses a function definition of the syntax:
  * fn (identifier_) (arg_list) (: type)? { compound_statement }
  * */
-std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
+std::unique_ptr<AST::Function> ParsingEngine::parseFunction(std::vector<Symbols::SymbolTableEntry *> begin_args) {
     eat(FN);
 
     std::string id = eat_identifier();
@@ -105,6 +105,11 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction() {
     bool var_args = false;
 
     auto args = parseArgList(&var_args);
+
+    if (!begin_args.empty()) {
+        args.reserve(args.size() + std::distance(begin_args.begin(), begin_args.end()));
+        args.insert(args.end(), begin_args.begin(), begin_args.end());
+    }
 
     TypeWrapper *return_type;
     if (is(':')) {
@@ -242,7 +247,7 @@ TypeWrapper *ParsingEngine::parseType() {
             int width = std::stoi(id.substr(1));
             basic_type = llvm::Type::getIntNTy(*llvm_context_, width);
         } else {
-            basic_type =  (*type_table)[id]->type;
+            basic_type = (*type_table)[id]->type;
         }
     }
 
@@ -279,9 +284,9 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
         auto typeinfo = (*type_table)[currentStruct->getStructName().str()]->fields;
         if (typeinfo.find(name) != typeinfo.end()) {
             return std::make_unique<AST::FieldAccessExpression>(std::make_unique<AST::VariableExpression>(
-                                                                                     symTab_->find(
-                                                                                             "this")),
-                                                                             typeinfo[name]);
+                                                                        symTab_->find(
+                                                                                "this")),
+                                                                typeinfo[name]);
         }
         return std::make_unique<AST::FunctionNameExpression>(funcTab_->find(name));
     }
@@ -611,10 +616,10 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
     int i = 0;
     while (!is('}')) {
         if (is(FN)) {
-            auto f = parseMethod();
+            auto f = parseFunction(
+                    {symTab_->define(TypeWrapper::getPointerTo(new TypeWrapper(t)), "this", Symbols::LOCAL)});
             std::string func_name = f->prototype->name;
-            f->prototype->name = id + "_" + f->prototype->name;
-            auto func = funcTab_->define(f->prototype->name, f->prototype->return_type);
+            auto func = funcTab_->define(mangleFunctionName(f->prototype.get()), f->prototype->return_type);
             (*type_table)[id]->methods[func_name] = func;
             methods.push_back(std::move(f));
             continue;
@@ -632,6 +637,7 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
     }
     eat('}');
     t->setBody(members, packed);
+    currentStruct = nullptr;
     return methods;
 }
 
@@ -685,40 +691,12 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseForStatement() {
     return std::make_unique<AST::ForStatement>(std::move(init), std::move(cond), std::move(update), std::move(body));
 }
 
-std::unique_ptr<AST::Function> ParsingEngine::parseMethod() {
-    eat(FN);
-    std::string id = eat_identifier();
-
-    auto *sym = new Symbols::SymbolTable();
-    symTab_ = sym;
-
-    auto this_ = sym->define(TypeWrapper::getPointerTo(new TypeWrapper(currentStruct)), "this", Symbols::LOCAL);
-
-    bool var_args = false;
-
-    auto args = parseArgList(&var_args);
-    args.insert(args.begin(), this_);
-
-    TypeWrapper *return_type;
-    if (is(':')) {
-        lexer.advance();
-        return_type = parseType();
-    } else {
-        return_type = new TypeWrapper(llvm::Type::getVoidTy(*llvm_context_));
+std::string ParsingEngine::mangleFunctionName(AST::FunctionPrototype *proto) {
+    std::string mangled = proto->name;
+    if (currentStruct != nullptr) {
+        proto->name = currentStruct->getStructName().str() + "_" + proto->name;
+        mangled = proto->name;
     }
 
-    if (is(';')) {
-        eat(';');
-        return std::make_unique<AST::Function>(
-                std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
-                nullptr);
-    }
-
-    auto body = parseCompoundStatement();
-
-    auto func = std::make_unique<AST::Function>(
-            std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
-            std::move(body));
-    func->symbol_table = sym;
-    return func;
+    return mangled;
 }

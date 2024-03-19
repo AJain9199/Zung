@@ -42,13 +42,13 @@ private:
 
     std::map<std::basic_string<char>, TypeInfo *> *type_table;
 
-    std::unique_ptr<AST::Function> parseFunction();
+    std::unique_ptr<AST::Function> parseFunction(std::vector<Symbols::SymbolTableEntry *> begin_args = {});
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
     std::vector<Symbols::SymbolTableEntry *> parseArgList(bool *is_var_args=nullptr);
     std::unique_ptr<AST::ExternFunction> parseExtern();
-    std::unique_ptr<AST::Function> parseMethod();
     std::vector<std::unique_ptr<AST::Function>> parseStruct();
 
+    std::string mangleFunctionName(AST::FunctionPrototype *proto);
 
     TypeWrapper * parseType();
 
