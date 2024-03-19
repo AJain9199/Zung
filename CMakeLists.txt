@@ -32,3 +32,6 @@ execute_process(COMMAND ~/llvm-project/build/bin/llvm-config --libs core --syste
 add_library(llvm SHARED IMPORTED)
 set_target_properties(llvm PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/libLLVM.so)
 target_link_libraries(Zung llvm)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(Zung PRIVATE DEBUG_MODE=1)
+endif()

@@ -15,11 +15,13 @@ int main() {
 
     std::cout << "Parsing took " << std::chrono::duration_cast<std::chrono::milliseconds>(parse_post - parse_pre).count() << "ms" << std::endl;
 
+#ifdef DEBUG
     auto print_pre = std::chrono::high_resolution_clock::now();
     PrintVisitor pv;
     p->accept(pv);
     auto print_post = std::chrono::high_resolution_clock::now();
     std::cout << "Printing took " << std::chrono::duration_cast<std::chrono::milliseconds>(print_post - print_pre).count() << "ms" << std::endl;
+#endif // DEBUG
 
     parse.get_context(context);
 

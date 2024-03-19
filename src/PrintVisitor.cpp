@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 #include <PrintVisitor.h>
 #include <AST.h>
 #include <iostream>
@@ -163,3 +165,5 @@ void PrintVisitor::visit(const AST::FloatLiteralExpression &) {
 void PrintVisitor::visit(const AST::ReturnStatement &) {
     std::cout << "return";
 }
+
+#endif // DEBUG

@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 #ifndef ZUNG_PRINTVISITOR_H
 #define ZUNG_PRINTVISITOR_H
 
@@ -31,3 +33,4 @@ public:
 };
 
 #endif //ZUNG_PRINTVISITOR_H
+#endif // DEBUG
