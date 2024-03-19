@@ -51,6 +51,7 @@ enum Operator {
     LE = '<',
     LEQ = '<' + '=', // 121
     NEQ = '!' + '=' + 1, // 33 + 61
+    PTR = '-' + '>'
 };
 // TODO: Token detection overhaul
 

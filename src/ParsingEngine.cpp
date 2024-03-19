@@ -374,6 +374,20 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                 default:
                     return LHS;
             }
+        } else if (lexer.get() == OP && lexer.operator_token() == PTR) {
+            lexer.advance();
+            std::string field = eat_identifier();
+
+            LHS = std::make_unique<AST::UnaryExpression>(MUL, std::move(LHS));
+
+            auto ltype = LHS->type(llvm_context_.get())->type->getStructName();
+            auto type_info = (*type_table)[ltype.str()];
+            if (type_info->fields.find(field) != type_info->fields.end()) {
+                auto f = (*type_table)[ltype.str()]->fields[field];
+                LHS = std::make_unique<AST::FieldAccessExpression>(std::move(LHS), f);
+            } else {
+                LHS = std::make_unique<AST::MethodNameExpression>(std::move(LHS), type_info->methods[field]);
+            }
         } else {
             return LHS;
         }

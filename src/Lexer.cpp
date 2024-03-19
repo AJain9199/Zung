@@ -94,11 +94,19 @@ TokenType Lexer::getToken() {
             } else {
                 rewind();
             }
+        case '-':
+            prev = current_char_;
+            next();
+            if (current_char_ == '>') {
+                operator_ = PTR;
+                return OP;
+            } else {
+                rewind();
+            }
         case '%':
         case '^':
         case '!':
         case '+':
-        case '-':
         case '&':
             operator_ = (Operator) (operator_ + current_char_);
             return OP;
