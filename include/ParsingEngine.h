@@ -44,6 +44,7 @@ private:
 
     std::unique_ptr<AST::Function>
     parseFunction(const std::vector<Symbols::SymbolTableEntry *>& begin_args= {}, std::string *original_name=nullptr);
+
     std::unique_ptr<AST::CompoundStatement> parseCompoundStatement();
     std::vector<Symbols::SymbolTableEntry *> parseArgList(bool *is_var_args=nullptr);
     std::unique_ptr<AST::ExternFunction> parseExtern();

@@ -132,11 +132,20 @@ ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *>& beg
     auto func = std::make_unique<AST::Function>(
             std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
             std::move(body));
+
+
     func->symbol_table = sym;
     if (original_name != nullptr) {
         *original_name =  func->prototype->name;
     }
-    funcTab_->define(mangleFunctionName(func->prototype.get()), func->prototype.get());
+
+    if (funcTab_->exists(id)) {
+        mangleFunctionName(func->prototype.get());
+        funcTab_->define(id, func->prototype.get());
+    } else {
+        funcTab_->define(mangleFunctionName(func->prototype.get()), func->prototype.get());
+    }
+
     return func;
 }
 
@@ -286,12 +295,14 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
     std::string name = eat_identifier();
     auto s = symTab_->find(name);
     if (s == nullptr) {
-        auto typeinfo = (*type_table)[currentStruct->getStructName().str()]->fields;
-        if (typeinfo.find(name) != typeinfo.end()) {
-            return std::make_unique<AST::FieldAccessExpression>(std::make_unique<AST::VariableExpression>(
-                                                                        symTab_->find(
-                                                                                "this")),
-                                                                typeinfo[name]);
+        if (currentStruct != nullptr) {
+            auto typeinfo = (*type_table)[currentStruct->getStructName().str()]->fields;
+            if (typeinfo.find(name) != typeinfo.end()) {
+                return std::make_unique<AST::FieldAccessExpression>(std::make_unique<AST::VariableExpression>(
+                                                                            symTab_->find(
+                                                                                    "this")),
+                                                                    typeinfo[name]);
+            }
         }
         return std::make_unique<AST::FunctionNameExpression>(funcTab_->find(name));
     }
@@ -351,7 +362,7 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                         }
                     }
                     eat(')');
-                    LHS = std::make_unique<AST::FunctionCallExpression>(std::move(LHS), std::move(args), funcTab_);
+                    LHS = std::make_unique<AST::FunctionCallExpression>(std::move(LHS), std::move(args), funcTab_, llvm_context_.get());
                 }
                     break;
                 case '[': {
@@ -708,6 +719,17 @@ std::string ParsingEngine::mangleFunctionName(AST::FunctionPrototype *proto) {
     if (currentStruct != nullptr) {
         proto->name = currentStruct->getStructName().str() + "_" + proto->name;
         mangled = proto->name;
+    }
+
+    if (funcTab_->exists(mangled)) {
+        std::string overloaded_id = "";
+        llvm::raw_string_ostream s(overloaded_id);
+        for (auto &i : proto->args) {
+            i->type->type->print(s);
+        }
+        mangled += overloaded_id;
+
+        proto->name = mangled;
     }
 
     return mangled;

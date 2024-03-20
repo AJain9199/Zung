@@ -195,7 +195,7 @@ void CodeGenerationEngine::visit(const AST::ExpressionStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) {
-    get_llvm_function(expression.callee->func->name);
+    get_llvm_function(std::get<AST::FunctionPrototype *>(expression.callee->func)->name);
     auto F = STACK_GET(Function *);
 
     if (F->arg_size() != expression.args.size() && !F->isVarArg()) {

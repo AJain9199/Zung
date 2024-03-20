@@ -315,9 +315,9 @@ namespace AST {
 
     class FunctionNameExpression : public Expression {
     public:
-        explicit FunctionNameExpression(AST::FunctionPrototype *f) : func(f) {};
+        explicit FunctionNameExpression(std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> f) : func(std::move(f)) {};
 
-        AST::FunctionPrototype *func;
+        std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> func;
 
         INJECT_ACCEPT();
 
@@ -447,7 +447,7 @@ namespace AST {
     class FunctionCallExpression : public Expression {
     public:
         FunctionCallExpression(std::unique_ptr<AST::Expression> f, std::vector<std::unique_ptr<Expression>> a,
-                               Symbols::FunctionTable *funcTab) : args(std::move(a)) {
+                               Symbols::FunctionTable *funcTab, llvm::LLVMContext *ctxt) : args(std::move(a)) {
             if (dynamic_cast<AST::Expression *>(f.get()) == nullptr) {
                 throw std::runtime_error("FunctionCallExpression: callee is not an expression");
             } else if (dynamic_cast<AST::MethodNameExpression *>(f.get()) != nullptr) {
@@ -457,10 +457,30 @@ namespace AST {
                                                                                      std::move(m->struct_));
                 args.insert(args.begin(), std::move(base));
             } else {
-                callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(
-                        dynamic_cast<AST::FunctionNameExpression *>(f.release())));
+                auto *func = dynamic_cast<AST::FunctionNameExpression *>(f.get());
+                if (std::holds_alternative<std::vector<AST::FunctionPrototype *>>(func->func)) { // overloaded function
+                    auto target_args = std::get<std::vector<AST::FunctionPrototype *>>(func->func);
+                    for (auto &i: target_args) {
+                        if (i->args.size() == args.size()) {
+                            bool match = true;
+                            for (int j = 0; j < i->args.size(); j++) {
+                                if (i->args[j]->type->type != args[j]->type(ctxt)->type) {
+                                    match = false;
+                                    break;
+                                }
+                            }
+                            if (match) {
+                                callee = std::make_unique<AST::FunctionNameExpression>(i);
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(
+                            dynamic_cast<AST::FunctionNameExpression *>(f.release())));
+                }
             }
-            return_type = callee->func->return_type;
+            return_type = std::get<AST::FunctionPrototype *>(callee->func)->return_type;
         };
 
         std::unique_ptr<AST::FunctionNameExpression> callee;
