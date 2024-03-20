@@ -9,6 +9,10 @@
 #include <llvm/IR/Type.h>
 #include "Types.h"
 
+namespace AST {
+    class FunctionPrototype;
+}
+
 namespace Symbols {
     typedef struct sym_t {
         TypeWrapper *type;
@@ -34,6 +38,14 @@ namespace Symbols {
     class SymbolTable {
     public:
         SymbolTableEntry *define(TypeWrapper *type, std::string name, enum VarType varType);
+        SymbolTableEntry *define(SymbolTableEntry *entry, enum VarType varType) {
+            if (varType == GLOBAL) {
+                global_symbols_[entry->n] = entry;
+            } else {
+                subroutine_symbols_[entry->n] = entry;
+            }
+            return entry;
+        }
 
         SymbolTableEntry *find(const std::string &name);
 
@@ -57,27 +69,16 @@ namespace Symbols {
 
     class FunctionTable {
     public:
-        Symbols::FunctionTableEntry *define(std::string name, TypeWrapper *return_type) {
-            auto *entry = new Symbols::FunctionTableEntry();
-            entry->name = std::move(name);
-            entry->return_type = return_type;
-            function_table_[entry->name] = entry;
-            return entry;
+        AST::FunctionPrototype *define(const std::string& name, AST::FunctionPrototype *function) {
+            return function_table_[name] = function;
         }
 
-        Symbols::FunctionTableEntry *find(const std::string &name) {
+        AST::FunctionPrototype *find(const std::string &name) {
             return function_table_[name];
         }
 
-        ~FunctionTable() {
-            for (auto &i: function_table_) {
-                delete i.second;
-            }
-            function_table_.clear();
-        };
-
     private:
-        std::unordered_map<std::string, FunctionTableEntry *> function_table_;
+        std::unordered_map<std::string, AST::FunctionPrototype *> function_table_;
     };
 }
 
@@ -93,7 +94,7 @@ typedef struct FieldInfo {
 struct TypeInfo {
     llvm::Type *type;
     std::map<std::string, FieldInfo> fields;
-    std::map<std::string, Symbols::FunctionTableEntry *> methods;
+    std::map<std::string, AST::FunctionPrototype *> methods;
 
     ~TypeInfo() {
         for (auto &i: fields) {

@@ -291,10 +291,10 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
     std::vector<llvm::Type *> args(function.args.size());
     uint i = 0;
     for (const auto &arg: function.args) {
-        args[i++] = arg->type;
+        args[i++] = arg->type->type;
     }
 
-    FunctionType *FT = FunctionType::get(function.return_type->type, args, function.is_var_args);
+    FunctionType *FT = FunctionType::get(function.return_type->type, args, function.var_args);
     Function *F = Function::Create(FT, Function::ExternalLinkage, function.name, module_.get());
 
     STACK_RET(F);

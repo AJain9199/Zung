@@ -34,11 +34,10 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
     while (lexer.hasMoreTokens()) {
         if (is(FN)) {
             auto f = parseFunction();
-            funcTab_->define(f->prototype->name, f->prototype->return_type);
             translation_unit->functions.push_back(std::move(f));
         } else if (is(EXTERN)) {
             auto f = parseExtern();
-            funcTab_->define(f->name, f->return_type);
+            funcTab_->define(f->name, f.get());
             translation_unit->prototypes.push_back(std::move(f));
         } else if (is(STRUCT)) {
             auto methods = std::move(parseStruct());
@@ -94,7 +93,8 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
 /* Parses a function definition of the syntax:
  * fn (identifier_) (arg_list) (: type)? { compound_statement }
  * */
-std::unique_ptr<AST::Function> ParsingEngine::parseFunction(std::vector<Symbols::SymbolTableEntry *> begin_args) {
+std::unique_ptr<AST::Function>
+ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *>& begin_args, std::string *original_name) {
     eat(FN);
 
     std::string id = eat_identifier();
@@ -107,8 +107,9 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction(std::vector<Symbols:
     auto args = parseArgList(&var_args);
 
     if (!begin_args.empty()) {
-        args.reserve(args.size() + std::distance(begin_args.begin(), begin_args.end()));
-        args.insert(args.end(), begin_args.begin(), begin_args.end());
+        for (auto &i : begin_args) {
+            args.insert(args.begin(), symTab_->define(i, Symbols::LOCAL));
+        }
     }
 
     TypeWrapper *return_type;
@@ -132,6 +133,10 @@ std::unique_ptr<AST::Function> ParsingEngine::parseFunction(std::vector<Symbols:
             std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
             std::move(body));
     func->symbol_table = sym;
+    if (original_name != nullptr) {
+        *original_name =  func->prototype->name;
+    }
+    funcTab_->define(mangleFunctionName(func->prototype.get()), func->prototype.get());
     return func;
 }
 
@@ -616,11 +621,18 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
     int i = 0;
     while (!is('}')) {
         if (is(FN)) {
+            auto this_arg = new Symbols::SymbolTableEntry;
+            this_arg->type = TypeWrapper::getPointerTo(new TypeWrapper(t));
+            this_arg->n = "this";
+
+            std::string original_name;
+
             auto f = parseFunction(
-                    {symTab_->define(TypeWrapper::getPointerTo(new TypeWrapper(t)), "this", Symbols::LOCAL)});
+                    {this_arg}, &original_name);
+
             std::string func_name = f->prototype->name;
-            auto func = funcTab_->define(mangleFunctionName(f->prototype.get()), f->prototype->return_type);
-            (*type_table)[id]->methods[func_name] = func;
+            // unmangled required here
+            (*type_table)[id]->methods[original_name] = f->prototype.get();
             methods.push_back(std::move(f));
             continue;
         }

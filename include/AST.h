@@ -140,29 +140,6 @@ namespace AST {
         INJECT_ACCEPT();
     };
 
-    /*
-     * Stores the function prototype, for an extern function. Should be linked with the translation unit.
-     */
-    class ExternFunction : public AbstractNode {
-    public:
-        std::string name;
-        std::vector<TypeWrapper *> args;
-        TypeWrapper *return_type;
-
-        bool is_var_args = false;
-
-        ExternFunction(std::string name, std::vector<TypeWrapper *> args, TypeWrapper *return_type, bool va) : name(
-                std::move(name)), args(std::move(args)), return_type(return_type), is_var_args(va) {}
-
-        ~ExternFunction() override {
-            delete return_type;
-            for (auto &arg : args) {
-                delete arg;
-            }
-        }
-
-        INJECT_ACCEPT();
-    };
 
     /*
      * Stores the function, which is the main unit of execution in the source file.  It may or may not include the function body
@@ -198,6 +175,25 @@ namespace AST {
         ~FunctionPrototype() override {
             delete return_type;
         }
+    };
+
+    /*
+     * Stores the function prototype, for an extern function. Should be linked with the translation unit.
+     */
+    class ExternFunction : public FunctionPrototype {
+    public:
+        std::vector<TypeWrapper *> typed_args;
+
+        ExternFunction(std::string name, std::vector<TypeWrapper *> args, TypeWrapper *return_type, bool va)
+                : FunctionPrototype(std::move(name), {}, return_type, va), typed_args(std::move(args)) {}
+
+        ~ExternFunction() override {
+            for (auto &arg: typed_args) {
+                delete arg;
+            }
+        }
+
+        INJECT_ACCEPT();
     };
 
     /*
@@ -319,9 +315,9 @@ namespace AST {
 
     class FunctionNameExpression : public Expression {
     public:
-        explicit FunctionNameExpression(Symbols::FunctionTableEntry *f) : func(f) {};
+        explicit FunctionNameExpression(AST::FunctionPrototype *f) : func(f) {};
 
-        Symbols::FunctionTableEntry *func;
+        AST::FunctionPrototype *func;
 
         INJECT_ACCEPT();
 
@@ -332,11 +328,11 @@ namespace AST {
 
     class MethodNameExpression : public Expression {
     public:
-        MethodNameExpression(std::unique_ptr<Expression> base, Symbols::FunctionTableEntry *name) : struct_(
+        MethodNameExpression(std::unique_ptr<Expression> base, AST::FunctionPrototype *name) : struct_(
                 std::move(base)), internal_name(name) {};
 
         std::unique_ptr<Expression> struct_;
-        Symbols::FunctionTableEntry *internal_name;
+        AST::FunctionPrototype *internal_name;
 
         INJECT_ACCEPT();
 
@@ -443,6 +439,7 @@ namespace AST {
             return nullptr;
         };
     };
+
     /*
      * A function call expression. It may or may not have arguments.
      */
@@ -456,7 +453,8 @@ namespace AST {
             } else if (dynamic_cast<AST::MethodNameExpression *>(f.get()) != nullptr) {
                 auto *m = dynamic_cast<AST::MethodNameExpression *>(f.get());
                 callee = std::make_unique<AST::FunctionNameExpression>(m->internal_name);
-                std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(Operator::AND, std::move(m->struct_));
+                std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(Operator::AND,
+                                                                                     std::move(m->struct_));
                 args.insert(args.begin(), std::move(base));
             } else {
                 callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(
