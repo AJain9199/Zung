@@ -273,6 +273,22 @@ TypeWrapper *ParsingEngine::parseType() {
         }
     }
 
+    if (is('[')) {
+        eat('[');
+        while (!is(']')) {
+            if (is(NUMERIC_LITERAL)) {
+                wrapper = TypeWrapper::getArrayTo(wrapper, lexer.numeric_literal());
+                lexer.advance();
+            }
+
+            if (!is(',')) {
+                break;
+            }
+            eat(',');
+        }
+        eat(']');
+    }
+
     return wrapper;
 }
 
@@ -376,8 +392,10 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                             eat(',');
                         }
                     }
+                    eat(']');
 
                     LHS = std::make_unique<AST::ArrayIndexingExpression>(std::move(LHS), std::move(indices));
+                    break;
                 }
                 case '.': {
                     eat('.');

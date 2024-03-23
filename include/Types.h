@@ -17,6 +17,10 @@ struct TypeWrapper {
         return new TypeWrapper(llvm::PointerType::get(type->type, 0), type);
     }
 
+    static TypeWrapper *getArrayTo(TypeWrapper *type, int size) {
+        return new TypeWrapper(llvm::ArrayType::get(type->type, size), type);
+    }
+
     ~TypeWrapper() {
         delete pointee_type;
     }

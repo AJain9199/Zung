@@ -21,3 +21,22 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::FieldAcc
     }
 }
 
+void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::ArrayIndexingExpression &expression) {
+    expression.array->accept(*this);
+    auto *array = engine_->stack_get<llvm::Value *>();
+
+    std::vector<llvm::Value *> indices;
+    indices.reserve(expression.index.size());
+    for (auto &i : expression.index) {
+        i->accept(*engine_);
+        indices.push_back(engine_->stack_get<llvm::Value *>());
+    }
+
+    auto *type = expression.array->type(engine_->llvm_context_.get())->type;
+    for (int i = 0; i < expression.index.size(); i++) {
+        type = type->getArrayElementType();
+    }
+
+    engine_->stack_return(engine_->builder_->CreateGEP(type, array, indices));
+}
+

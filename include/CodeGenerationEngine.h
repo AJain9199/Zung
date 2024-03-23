@@ -80,7 +80,7 @@ private:
 
         void visit(const AST::IfStatement &) override {};
 
-        void visit(const AST::ArrayIndexingExpression &) override {};
+        void visit(const AST::ArrayIndexingExpression &) override;
 
         void visit(const AST::FunctionCallExpression &) override {};
 
@@ -128,7 +128,7 @@ public:
 
     void visit(const AST::IfStatement &) override;
 
-    void visit(const AST::ArrayIndexingExpression &) override {};
+    void visit(const AST::ArrayIndexingExpression &) override;
 
     RETURNS(Value *) visit(const AST::FunctionCallExpression &) override;
 

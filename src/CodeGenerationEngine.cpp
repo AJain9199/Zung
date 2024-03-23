@@ -365,3 +365,23 @@ void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
         STACK_RET(builder_->CreateLoad(type->getStructElementType(expression.field.idx), get_field));
     }
 }
+
+void CodeGenerationEngine::visit(const AST::ArrayIndexingExpression &expression) {
+    expression.array->accept(*rvalue_engine_);
+    auto *array = STACK_GET(llvm::Value *);
+
+    std::vector<llvm::Value *> indices;
+    indices.reserve(expression.index.size());
+    for (auto &i : expression.index) {
+        i->accept(*this);
+        indices.push_back(STACK_GET(llvm::Value *));
+    }
+
+    auto *type = expression.array->type(llvm_context_.get())->type;
+    for (int i = 0; i < expression.index.size(); i++) {
+        type = type->getArrayElementType();
+    }
+
+    auto *ptr = builder_->CreateGEP(type, array, indices);
+    STACK_RET(builder_->CreateLoad(type, ptr));
+}
