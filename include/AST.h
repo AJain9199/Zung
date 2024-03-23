@@ -315,7 +315,8 @@ namespace AST {
 
     class FunctionNameExpression : public Expression {
     public:
-        explicit FunctionNameExpression(std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> f) : func(std::move(f)) {};
+        explicit FunctionNameExpression(std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> f)
+                : func(std::move(f)) {};
 
         std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> func;
 
@@ -328,11 +329,12 @@ namespace AST {
 
     class MethodNameExpression : public Expression {
     public:
-        MethodNameExpression(std::unique_ptr<Expression> base, AST::FunctionPrototype *name) : struct_(
-                std::move(base)), internal_name(name) {};
+        MethodNameExpression(std::unique_ptr<Expression> base,
+                             std::variant<FunctionPrototype *, std::vector<FunctionPrototype *>> name) : struct_(
+                std::move(base)), internal_name(std::move(name)) {};
 
         std::unique_ptr<Expression> struct_;
-        AST::FunctionPrototype *internal_name;
+        std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> internal_name;
 
         INJECT_ACCEPT();
 
@@ -452,7 +454,33 @@ namespace AST {
                 throw std::runtime_error("FunctionCallExpression: callee is not an expression");
             } else if (dynamic_cast<AST::MethodNameExpression *>(f.get()) != nullptr) {
                 auto *m = dynamic_cast<AST::MethodNameExpression *>(f.get());
-                callee = std::make_unique<AST::FunctionNameExpression>(m->internal_name);
+                if (std::holds_alternative<std::vector<AST::FunctionPrototype *>>(m->internal_name)) {
+                    std::vector<TypeWrapper *> types;
+                    types.reserve(args.size() + 1);
+                    types.push_back(TypeWrapper::getPointerTo(m->struct_->type(ctxt)));
+                    for (auto &i: args) {
+                        types.push_back(i->type(ctxt));
+                    }
+
+                    auto target_args = std::get<std::vector<AST::FunctionPrototype *>>(m->internal_name);
+                    for (auto &potential_func: target_args) {
+                        if (potential_func->args.size() == types.size()) {
+                            bool match = true;
+                            for (int i = 0; i < types.size(); i++) {
+                                if (potential_func->args[i]->type->type != types[i]->type) {
+                                    match = false;
+                                    break;
+                                }
+                            }
+                            if (match) {
+                                callee = std::make_unique<AST::FunctionNameExpression>(potential_func);
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    callee = std::make_unique<AST::FunctionNameExpression>(m->internal_name);
+                }
                 std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(Operator::AND,
                                                                                      std::move(m->struct_));
                 args.insert(args.begin(), std::move(base));

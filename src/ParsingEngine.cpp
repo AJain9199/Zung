@@ -94,7 +94,7 @@ std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
  * fn (identifier_) (arg_list) (: type)? { compound_statement }
  * */
 std::unique_ptr<AST::Function>
-ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *>& begin_args, std::string *original_name) {
+ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *> &begin_args, std::string *original_name) {
     eat(FN);
 
     std::string id = eat_identifier();
@@ -107,7 +107,7 @@ ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *>& beg
     auto args = parseArgList(&var_args);
 
     if (!begin_args.empty()) {
-        for (auto &i : begin_args) {
+        for (auto &i: begin_args) {
             args.insert(args.begin(), symTab_->define(i, Symbols::LOCAL));
         }
     }
@@ -136,7 +136,7 @@ ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *>& beg
 
     func->symbol_table = sym;
     if (original_name != nullptr) {
-        *original_name =  func->prototype->name;
+        *original_name = func->prototype->name;
     }
 
     if (funcTab_->exists(id)) {
@@ -362,7 +362,8 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                         }
                     }
                     eat(')');
-                    LHS = std::make_unique<AST::FunctionCallExpression>(std::move(LHS), std::move(args), funcTab_, llvm_context_.get());
+                    LHS = std::make_unique<AST::FunctionCallExpression>(std::move(LHS), std::move(args), funcTab_,
+                                                                        llvm_context_.get());
                 }
                     break;
                 case '[': {
@@ -643,7 +644,13 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
 
             std::string func_name = f->prototype->name;
             // unmangled required here
-            (*type_table)[id]->methods[original_name] = f->prototype.get();
+            if ((*type_table)[id]->methods.find(original_name) != (*type_table)[id]->methods.end()) {
+                (*type_table)[id]->methods[original_name] = std::vector<AST::FunctionPrototype *>(
+                        {std::get<AST::FunctionPrototype *>((*type_table)[id]->methods[original_name]),
+                         f->prototype.get()});
+            } else {
+                (*type_table)[id]->methods[original_name] = f->prototype.get();
+            }
             methods.push_back(std::move(f));
             continue;
         }
@@ -722,14 +729,13 @@ std::string ParsingEngine::mangleFunctionName(AST::FunctionPrototype *proto) {
     }
 
     if (funcTab_->exists(mangled)) {
-        std::string overloaded_id = "";
+        std::string overloaded_id;
         llvm::raw_string_ostream s(overloaded_id);
-        for (auto &i : proto->args) {
+        for (auto &i: proto->args) {
             i->type->type->print(s);
         }
-        mangled += overloaded_id;
 
-        proto->name = mangled;
+        proto->name += overloaded_id;
     }
 
     return mangled;

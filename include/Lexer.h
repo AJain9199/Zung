@@ -67,7 +67,8 @@ enum Keyword {
     VAR,
     EXTERN,
     CLASS,
-    PACKED
+    PACKED,
+    BOOL
 };
 
 enum DeclarationSpecifier {

@@ -115,7 +115,7 @@ typedef struct FieldInfo {
 struct TypeInfo {
     llvm::Type *type;
     std::map<std::string, FieldInfo> fields;
-    std::map<std::string, AST::FunctionPrototype *> methods;
+    std::map<std::string, std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>>> methods;
 
     ~TypeInfo() {
         for (auto &i: fields) {
