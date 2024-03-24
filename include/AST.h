@@ -486,6 +486,7 @@ namespace AST {
                 std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(Operator::AND,
                                                                                      std::move(m->struct_));
                 args.insert(args.begin(), std::move(base));
+                is_method = true;
             } else {
                 auto *func = dynamic_cast<AST::FunctionNameExpression *>(f.get());
                 if (std::holds_alternative<std::vector<AST::FunctionPrototype *>>(func->func)) { // overloaded function
@@ -517,6 +518,8 @@ namespace AST {
         std::vector<std::unique_ptr<Expression>> args;
 
         TypeWrapper *return_type;
+
+        bool is_method = false;
 
         INJECT_ACCEPT();
 

@@ -220,6 +220,12 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
     std::vector<Value *> args(expression.args.size());
     int i = 0;
     for (auto &arg: expression.args) {
+        if (expression.is_method && i == 0) {
+            arg->accept(*rvalue_engine_);
+            args[i++] = STACK_GET(Value *);
+            continue;
+        }
+
         arg->accept(*this);
         args[i++] = (STACK_GET(Value *));
     }

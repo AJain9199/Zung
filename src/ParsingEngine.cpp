@@ -513,7 +513,7 @@ ParsingEngine::parseBinaryExpression(unsigned int min_precedence, std::unique_pt
             }
         }
 
-        if (LHS->type(llvm_context_.get())->type->isStructTy()) {
+        if (LHS->type(llvm_context_.get())->type->isStructTy() && op != EQ) {
             auto ltype = (*type_table)[LHS->type(llvm_context_.get())->type->getStructName().str()];
             std::string method_name;
             switch (op) {

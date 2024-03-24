@@ -2,8 +2,6 @@
 #include <AST.h>
 
 void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::VariableExpression &expr) {
-    expr.variable->type->type->print(llvm::errs(), true);
-    engine_->symbol_table_[expr.variable]->getType()->print(llvm::errs(), true);
     if (expr.variable->scope == Symbols::GLOBAL) {
         engine_->stack_return(engine_->global_symbol_table_[expr.variable]);
     } else {
@@ -44,5 +42,7 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::ArrayInd
 void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
     if (expression.op == MUL) {
         expression.operand->accept(*engine_);
+    } else if (expression.op == AND) {
+        expression.operand->accept(*this);
     }
 }
