@@ -259,10 +259,10 @@ CodeGenerationEngine::create_entry_block_alloca(llvm::Function *func, const std:
 
 void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
     if (expression.op == MUL) {
-        expression.operand->accept(*rvalue_engine_);
+        expression.operand->accept(*this);
         auto *val = STACK_GET(Value *);
 
-        STACK_RET(builder_->CreateLoad(val->getType(), val));
+        STACK_RET(builder_->CreateLoad(expression.operand->type(llvm_context_.get())->pointee_type->type, val));
     }
 
     expression.operand->accept(*this);
@@ -357,7 +357,7 @@ void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
         auto get_field = builder_->CreateStructGEP(expression.struct_->type(llvm_context_.get())->type, base_struct, expression.field.idx);
         STACK_RET(builder_->CreateLoad(expression.struct_->type(llvm_context_.get())->type->getStructElementType(expression.field.idx), get_field));
     } else {
-        expression.struct_->accept(*this);
+        expression.struct_->accept(*rvalue_engine_);
         auto *struct_ptr = STACK_GET(llvm::Value *);
         auto type = expression.struct_->type(llvm_context_.get())->type;
 

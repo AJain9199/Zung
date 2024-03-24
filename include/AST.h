@@ -424,7 +424,7 @@ namespace AST {
             auto optype = operand->type(context);
 
             if (op == Operator::AND) {
-                return new TypeWrapper(llvm::PointerType::get(*context, 0), optype);
+                return TypeWrapper::getPointerTo(optype);
             }
 
             if (op == Operator::MUL) {

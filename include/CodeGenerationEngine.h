@@ -86,7 +86,7 @@ private:
 
         void visit(const AST::BinaryExpression &) override {};
 
-        void visit(const AST::UnaryExpression &) override {};
+        void visit(const AST::UnaryExpression &) override;
 
         void visit(const AST::IntegralLiteralExpression &) override {};
 

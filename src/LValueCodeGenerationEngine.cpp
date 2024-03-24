@@ -14,7 +14,7 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::FieldAcc
         auto get_field = engine_->builder_->CreateStructGEP(expr.struct_->type(engine_->llvm_context_.get())->type, base_struct, expr.field.idx);
         engine_->stack_return(get_field);
     } else {
-        expr.struct_->accept(*engine_);
+        expr.struct_->accept(*this);
         auto *struct_ptr = engine_->stack_get<llvm::Value *>();
         auto get_field = engine_->builder_->CreateStructGEP(expr.struct_->type(engine_->llvm_context_.get())->type, struct_ptr, expr.field.idx);
         engine_->stack_return(get_field);
@@ -40,3 +40,8 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::ArrayInd
     engine_->stack_return(engine_->builder_->CreateGEP(type, array, indices));
 }
 
+void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
+    if (expression.op == MUL) {
+        expression.operand->accept(*engine_);
+    }
+}

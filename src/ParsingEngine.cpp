@@ -502,7 +502,34 @@ ParsingEngine::parseBinaryExpression(unsigned int min_precedence, std::unique_pt
             }
         }
 
-        LHS = std::make_unique<AST::BinaryExpression>(std::move(LHS), op, std::move(RHS));
+        if (LHS->type(llvm_context_.get())->type->isStructTy()) {
+            auto ltype = (*type_table)[LHS->type(llvm_context_.get())->type->getStructName().str()];
+            std::string method_name;
+            switch (op) {
+                case ADD:
+                    method_name = "__add__";
+                    break;
+                case SUB:
+                    method_name = "__sub__";
+                    break;
+                case MUL:
+                    method_name = "__mul__";
+                    break;
+                case DIV:
+                    method_name = "__div__";
+                    break;
+                default:
+                    std::cerr << "Unsupported operator" << std::endl;
+                    return nullptr;
+            }
+            std::vector<std::unique_ptr<AST::Expression>> args(1);
+            args[0] = std::move(RHS);
+            auto m = std::make_unique<AST::MethodNameExpression>(std::move(LHS), ltype->methods[method_name]);
+            LHS = std::make_unique<AST::FunctionCallExpression>(std::move(m), std::move(args), funcTab_,
+                                                                llvm_context_.get());
+        } else {
+            LHS = std::make_unique<AST::BinaryExpression>(std::move(LHS), op, std::move(RHS));
+        }
     }
 }
 
