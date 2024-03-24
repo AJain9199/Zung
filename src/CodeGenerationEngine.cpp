@@ -27,15 +27,23 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             throw std::runtime_error("LHS of assignment must be an assignable expression");
         }
 
+        Value *RHS;
         if (dynamic_cast<AST::AggregateLiteralExpression *>(expression.RHS.get()) != nullptr) {
             auto *agg = dynamic_cast<AST::AggregateLiteralExpression *>(expression.RHS.get());
+            this->lhs = expression.LHS.get();
+
             agg->cast_type = expression.LHS->type(llvm_context_.get());
+            agg->accept(*this);
+            if (RHS = STACK_GET(Value *); RHS == nullptr) {
+                return;
+            }
+        } else {
+            expression.RHS->accept(*this);
+            RHS = STACK_GET(Value *);
         }
 
         expression.LHS->accept(*rvalue_engine_);
         auto *LHS = STACK_GET(Value *);
-        expression.RHS->accept(*this);
-        auto *RHS = STACK_GET(Value *);
 
         builder_->CreateStore(RHS, LHS);
         STACK_RET(RHS);
@@ -434,16 +442,34 @@ RETURNS(llvm::Value *) CodeGenerationEngine::visit(const AST::AggregateLiteralEx
     }
 
     if (is_const) {
-        std::vector<Constant *> const_elements;
-        const_elements.reserve(elements.size());
-        for (auto &i : elements) {
-            const_elements.push_back(dyn_cast<Constant>(i));
-        }
-
         if (expression.cast_type->type->isStructTy()) {
+            std::vector<Constant *> const_elements;
+            const_elements.reserve(elements.size());
+            for (int i = 0; i < elements.size(); i++) {
+                auto el = dyn_cast<Constant>(elements[i]);
+                expression.cast_type->type->getStructElementType(i)->print(llvm::outs());
+                el->mutateType(expression.cast_type->type->getStructElementType(i));
+                const_elements.push_back(el);
+            }
             STACK_RET(ConstantStruct::get(dyn_cast<StructType>(expression.cast_type->type), const_elements));
         } else {
+            std::vector<Constant *> const_elements;
+            const_elements.reserve(elements.size());
+            for (auto el : elements) {
+                el->mutateType(expression.cast_type->type->getArrayElementType());
+                const_elements.push_back(dyn_cast<Constant>(el));
+            }
             STACK_RET(ConstantArray::get(dyn_cast<ArrayType>(expression.cast_type->type), const_elements));
+        }
+    } else {
+        if (expression.cast_type->type->isStructTy()) {
+            lhs->accept(*rvalue_engine_);
+            auto *lhs_val = STACK_GET(Value *);
+            for (int i = 0; i < elements.size(); i++) {
+                auto field = builder_->CreateStructGEP(expression.cast_type->type, lhs_val, i);
+                builder_->CreateStore(elements[i], field);
+            }
+            STACK_RET(nullptr);
         }
     }
 }

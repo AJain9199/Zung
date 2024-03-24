@@ -47,7 +47,7 @@ private:
 
     void get_llvm_function(const std::string &name);
 
-    llvm::Value *lhs;
+    AST::Expression* lhs;
 
     static llvm::AllocaInst *
     create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type);
