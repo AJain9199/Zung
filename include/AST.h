@@ -134,8 +134,10 @@ namespace AST {
     public:
         std::vector<std::unique_ptr<Function>> functions;
         std::vector<std::unique_ptr<ExternFunction>> prototypes;
+        std::vector<std::unique_ptr<Statement>> global_declarations;
 
         std::map<std::string, struct TypeInfo *> type_table;
+        Symbols::SymbolTable *global_symbol_table;
 
         INJECT_ACCEPT();
     };
@@ -536,7 +538,19 @@ namespace AST {
         INJECT_ACCEPT();
 
         TypeWrapper *type(llvm::LLVMContext *context) override {
-            return array->type(context)->pointee_type;
+            auto arr_type = array->type(context);
+            if (arr_type == nullptr) {
+                return nullptr;
+            }
+
+            auto type = arr_type;
+            for (auto &i: index) {
+                if (!type->type->isArrayTy()) {
+                    return nullptr;
+                }
+                type = new TypeWrapper(type->type->getArrayElementType());
+            }
+            return type;
         };
     };
 

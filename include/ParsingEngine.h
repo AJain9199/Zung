@@ -72,7 +72,7 @@ private:
     std::unique_ptr<AST::Statement> parseForStatement();
     std::unique_ptr<AST::Statement> parseExpressionStatement();
     std::unique_ptr<AST::Statement> parseIfStatement();
-    std::unique_ptr<AST::Statement> parseDeclarationStatement();
+    std::unique_ptr<AST::Statement> parseDeclarationStatement(bool global=false);
 
 
     void eat(TokenType t);
@@ -91,6 +91,7 @@ private:
     bool is(enum Operator op);
 
     Symbols::SymbolTable *symTab_{};
+    Symbols::SymbolTable *globalSymTab_{};
     Symbols::FunctionTable *funcTab_{};
 
     static std::map<enum Operator, int> precedence;

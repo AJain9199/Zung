@@ -30,7 +30,11 @@ std::map<enum Operator, int> ParsingEngine::precedence = {
 };
 
 AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
+    auto *global_sym = new Symbols::SymbolTable();
+    globalSymTab_ = global_sym;
     auto *translation_unit = new AST::TranslationUnit();
+    translation_unit->global_symbol_table = global_sym;
+
     while (lexer.hasMoreTokens()) {
         if (is(FN)) {
             auto f = parseFunction();
@@ -46,6 +50,9 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
             translation_unit->functions.insert(translation_unit->functions.end(),
                                                std::make_move_iterator(methods.begin()),
                                                std::make_move_iterator(methods.end()));
+        } else if (is(VAR)) {
+            auto s = parseDeclarationStatement(true);
+            translation_unit->global_declarations.push_back(std::move(s));
         } else {
             std::cerr << "Unexpected token" << std::endl;
         }
@@ -311,6 +318,10 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
     std::string name = eat_identifier();
     auto s = symTab_->find(name);
     if (s == nullptr) {
+        if (globalSymTab_->find(name) != nullptr) {
+            return std::make_unique<AST::VariableExpression>(globalSymTab_->find(name));
+        }
+
         if (currentStruct != nullptr) {
             auto typeinfo = (*type_table)[currentStruct->getStructName().str()]->fields;
             if (typeinfo.find(name) != typeinfo.end()) {
@@ -596,7 +607,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseIfStatement() {
 /* Parses a declaration statement of the syntax:
  * var type identifier_ (= expression)? (, identifier_ (= expression)?)*;
  * */
-std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement() {
+std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement(bool global) {
     eat(VAR);
 
     std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
@@ -604,7 +615,12 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement() {
 
     while (true) {
         std::string name = eat_identifier();
-        Symbols::SymbolTableEntry *entry = symTab_->define(type, name, Symbols::LOCAL);
+        Symbols::SymbolTableEntry *entry;
+        if (global) {
+            entry = globalSymTab_->define(type, name, Symbols::GLOBAL);
+        } else {
+            entry = symTab_->define(type, name, Symbols::LOCAL);
+        }
 
         if (is(EQ)) {
             lexer.advance();

@@ -14,9 +14,15 @@ namespace AST {
 }
 
 namespace Symbols {
+    enum VarType {
+        GLOBAL,
+        LOCAL
+    };
+
     typedef struct sym_t {
         TypeWrapper *type;
         std::string n;
+        VarType scope;
 
         [[nodiscard]] std::string name() const {
             return n;
@@ -30,42 +36,28 @@ namespace Symbols {
         ~func_t() {}
     } FunctionTableEntry;
 
-    enum VarType {
-        GLOBAL,
-        LOCAL
-    };
 
     class SymbolTable {
     public:
         SymbolTableEntry *define(TypeWrapper *type, std::string name, enum VarType varType);
 
         SymbolTableEntry *define(SymbolTableEntry *entry, enum VarType varType) {
-            if (varType == GLOBAL) {
-                global_symbols_[entry->n] = entry;
-            } else {
-                subroutine_symbols_[entry->n] = entry;
-            }
+            symbols_[entry->n] = entry;
+            entry->scope = varType;
             return entry;
         }
 
         SymbolTableEntry *find(const std::string &name);
 
         ~SymbolTable() {
-            for (auto &i: subroutine_symbols_) {
+            for (auto &i: symbols_) {
                 delete i.second->type;
                 delete i.second;
-            }
-            for (auto &i: global_symbols_) {
-                if (i.second) {
-                    delete i.second->type;
-                    delete i.second;
-                }
             }
         }
 
     private:
-        std::unordered_map<std::string, SymbolTableEntry *> subroutine_symbols_;
-        std::unordered_map<std::string, SymbolTableEntry *> global_symbols_;
+        std::unordered_map<std::string, SymbolTableEntry *> symbols_;
     };
 
     class FunctionTable {

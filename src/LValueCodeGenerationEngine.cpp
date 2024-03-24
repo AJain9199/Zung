@@ -4,7 +4,11 @@
 void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::VariableExpression &expr) {
     expr.variable->type->type->print(llvm::errs(), true);
     engine_->symbol_table_[expr.variable]->getType()->print(llvm::errs(), true);
-    engine_->stack_return(engine_->symbol_table_[expr.variable]);
+    if (expr.variable->scope == Symbols::GLOBAL) {
+        engine_->stack_return(engine_->global_symbol_table_[expr.variable]);
+    } else {
+        engine_->stack_return(engine_->symbol_table_[expr.variable]);
+    }
 }
 
 void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::FieldAccessExpression &expr) {
@@ -33,9 +37,6 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::ArrayInd
     }
 
     auto *type = expression.array->type(engine_->llvm_context_.get())->type;
-    for (int i = 0; i < expression.index.size(); i++) {
-        type = type->getArrayElementType();
-    }
 
     engine_->stack_return(engine_->builder_->CreateGEP(type, array, indices));
 }

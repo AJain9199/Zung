@@ -41,6 +41,7 @@ private:
     std::unique_ptr<llvm::IRBuilder<>> builder_;
     std::unique_ptr<llvm::Module> module_;
 
+    std::map<Symbols::SymbolTableEntry *, llvm::GlobalVariable *> global_symbol_table_;
     std::map<Symbols::SymbolTableEntry *, llvm::AllocaInst *> symbol_table_;
     func_table_t function_table_;
 

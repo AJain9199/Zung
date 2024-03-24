@@ -8,17 +8,14 @@ SymbolTableEntry *SymbolTable::define(TypeWrapper *type, std::string name, enum 
 
     entry->n = name;
     entry->type = type;
-    if (varType == GLOBAL) {
-        global_symbols_[name] = entry;
-    } else {
-        subroutine_symbols_[name] = entry;
-    }
+    entry->scope = varType;
+    symbols_[name] = entry;
     return entry;
 }
 
 SymbolTableEntry *SymbolTable::find(const std::string &name) {
-    auto it = subroutine_symbols_.find(name);
-    return it == subroutine_symbols_.end() ? global_symbols_[name] : it->second;
+    auto it = symbols_.find(name);
+    return it == symbols_.end() ? nullptr : it->second;
 }
 
 AST::FunctionPrototype *FunctionTable::find(const std::string &name, std::vector<TypeWrapper *> arg_types)  {

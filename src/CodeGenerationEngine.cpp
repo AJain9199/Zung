@@ -12,8 +12,13 @@ void CodeGenerationEngine::visit(const AST::IntegralLiteralExpression &expressio
 }
 
 void CodeGenerationEngine::visit(const AST::VariableExpression &expression) {
-    auto var = symbol_table_[expression.variable];
-    STACK_RET(builder_->CreateLoad(var->getAllocatedType(), var, expression.variable->name()));
+    if (expression.variable->scope == Symbols::GLOBAL) {
+        auto var = global_symbol_table_[expression.variable];
+        STACK_RET(builder_->CreateLoad(var->getValueType(), var, expression.variable->name()));
+    } else {
+        auto var = symbol_table_[expression.variable];
+        STACK_RET(builder_->CreateLoad(var->getAllocatedType(), var, expression.variable->name()));
+    }
 }
 
 void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
@@ -96,9 +101,9 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             icmp = ICmpInst::ICMP_SLE;
             goto cmp_ops;
         case EXP:
-            STACK_RET(builder_->CreateCall(module_->getFunction("pow"), {LHS, RHS}));
+        STACK_RET(builder_->CreateCall(module_->getFunction("pow"), {LHS, RHS}));
         case FLR:
-            STACK_RET(builder_->CreateCall(module_->getFunction("flr"), {LHS, RHS}));
+        STACK_RET(builder_->CreateCall(module_->getFunction("flr"), {LHS, RHS}));
         default:
             throw std::runtime_error("Not implemented yet");
     }
@@ -178,15 +183,25 @@ void CodeGenerationEngine::visit(const AST::ReturnStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
-    Function *F = builder_->GetInsertBlock()->getParent();
-
     for (auto &it: statement.init_list) {
         it.second->accept(*this);
         auto *val = STACK_GET(Value *);
 
-        AllocaInst *alloca = create_entry_block_alloca(F, it.first->name(), it.first->type->type);
-        builder_->CreateStore(val, alloca);
-        symbol_table_[it.first] = alloca;
+        if (it.first->scope == Symbols::GLOBAL) {
+            auto *global = new GlobalVariable(*module_, it.first->type->type, false, GlobalValue::ExternalLinkage,
+                                              nullptr, it.first->name());
+            if (!isa<Constant>(val)) {
+                throw std::runtime_error("Global variable must be initialized with a constant");
+            }
+
+            global->setInitializer(dyn_cast<Constant>(val));
+            global_symbol_table_[it.first] = global;
+        } else {
+            Function *F = builder_->GetInsertBlock()->getParent();
+            AllocaInst *alloca = create_entry_block_alloca(F, it.first->name(), it.first->type->type);
+            symbol_table_[it.first] = alloca;
+            builder_->CreateStore(val, alloca);
+        }
     }
 }
 
@@ -223,6 +238,10 @@ void CodeGenerationEngine::visit(const AST::CompoundStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
+    for (auto &i : unit.global_declarations) {
+        i->accept(*this);
+    }
+
     for (auto &i: unit.prototypes) {
         i->accept(*this);
         STACK_GET(Function *); // don't pollute stack, returns are always popped off the stack
@@ -232,6 +251,7 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
         i->accept(*this);
         STACK_GET(Function *);
     }
+
 
     std::error_code errorCode;
     llvm::raw_fd_ostream file("../output.ll", errorCode);
@@ -354,8 +374,11 @@ void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
         expression.struct_->accept(*rvalue_engine_);
         base_struct = STACK_GET(llvm::Value *);
         base_struct->getType()->print(llvm::errs(), true);
-        auto get_field = builder_->CreateStructGEP(expression.struct_->type(llvm_context_.get())->type, base_struct, expression.field.idx);
-        STACK_RET(builder_->CreateLoad(expression.struct_->type(llvm_context_.get())->type->getStructElementType(expression.field.idx), get_field));
+        auto get_field = builder_->CreateStructGEP(expression.struct_->type(llvm_context_.get())->type, base_struct,
+                                                   expression.field.idx);
+        STACK_RET(builder_->CreateLoad(
+                expression.struct_->type(llvm_context_.get())->type->getStructElementType(expression.field.idx),
+                get_field));
     } else {
         expression.struct_->accept(*rvalue_engine_);
         auto *struct_ptr = STACK_GET(llvm::Value *);
@@ -372,7 +395,7 @@ void CodeGenerationEngine::visit(const AST::ArrayIndexingExpression &expression)
 
     std::vector<llvm::Value *> indices;
     indices.reserve(expression.index.size());
-    for (auto &i : expression.index) {
+    for (auto &i: expression.index) {
         i->accept(*this);
         indices.push_back(STACK_GET(llvm::Value *));
     }
@@ -382,6 +405,6 @@ void CodeGenerationEngine::visit(const AST::ArrayIndexingExpression &expression)
         type = type->getArrayElementType();
     }
 
-    auto *ptr = builder_->CreateGEP(type, array, indices);
+    auto *ptr = builder_->CreateGEP(expression.array->type(llvm_context_.get())->type, array, indices);
     STACK_RET(builder_->CreateLoad(type, ptr));
 }
