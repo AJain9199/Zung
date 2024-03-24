@@ -27,6 +27,11 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             throw std::runtime_error("LHS of assignment must be an assignable expression");
         }
 
+        if (dynamic_cast<AST::AggregateLiteralExpression *>(expression.RHS.get()) != nullptr) {
+            auto *agg = dynamic_cast<AST::AggregateLiteralExpression *>(expression.RHS.get());
+            agg->cast_type = expression.LHS->type(llvm_context_.get());
+        }
+
         expression.LHS->accept(*rvalue_engine_);
         auto *LHS = STACK_GET(Value *);
         expression.RHS->accept(*this);
@@ -413,4 +418,32 @@ void CodeGenerationEngine::visit(const AST::ArrayIndexingExpression &expression)
 
     auto *ptr = builder_->CreateGEP(expression.array->type(llvm_context_.get())->type, array, indices);
     STACK_RET(builder_->CreateLoad(type, ptr));
+}
+
+RETURNS(llvm::Value *) CodeGenerationEngine::visit(const AST::AggregateLiteralExpression &expression) {
+    bool is_const = true;
+    std::vector<Value *> elements;
+    elements.reserve(expression.elements.size());
+    for (auto &i : expression.elements) {
+        i->accept(*this);
+        auto val = STACK_GET(llvm::Value *);
+        elements.push_back(val);
+        if (!isa<Constant>(val)) {
+            is_const = false;
+        }
+    }
+
+    if (is_const) {
+        std::vector<Constant *> const_elements;
+        const_elements.reserve(elements.size());
+        for (auto &i : elements) {
+            const_elements.push_back(dyn_cast<Constant>(i));
+        }
+
+        if (expression.cast_type->type->isStructTy()) {
+            STACK_RET(ConstantStruct::get(dyn_cast<StructType>(expression.cast_type->type), const_elements));
+        } else {
+            STACK_RET(ConstantArray::get(dyn_cast<ArrayType>(expression.cast_type->type), const_elements));
+        }
+    }
 }

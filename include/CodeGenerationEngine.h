@@ -47,6 +47,8 @@ private:
 
     void get_llvm_function(const std::string &name);
 
+    llvm::Value *lhs;
+
     static llvm::AllocaInst *
     create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type);
 
@@ -94,6 +96,8 @@ private:
         void visit(const AST::StringLiteralExpression &) override {};
 
        void visit(const AST::FloatLiteralExpression &) override {};
+
+            void visit(const AST::AggregateLiteralExpression &) override {};
     };
 
     LValueCodeGenerationEngine *rvalue_engine_;
@@ -133,7 +137,7 @@ public:
 
     RETURNS(Value *) visit(const AST::FunctionCallExpression &) override;
 
-    RETURNS(llvm::AllocaInst*) visit(const AST::VariableExpression &) override;
+    RETURNS(Value *) visit(const AST::VariableExpression &) override;
 
     RETURNS(Value *) visit(const AST::BinaryExpression &) override;
 
@@ -144,6 +148,8 @@ public:
     RETURNS(llvm::Constant *) visit(const AST::StringLiteralExpression &) override;
 
     RETURNS(llvm::ConstantFP *) visit(const AST::FloatLiteralExpression &) override;
+
+    RETURNS(llvm::Value *) visit(const AST::AggregateLiteralExpression &) override;
 
     void visit(const AST::FieldAccessExpression &) override;
 

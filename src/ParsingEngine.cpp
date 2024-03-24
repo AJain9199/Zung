@@ -539,7 +539,7 @@ ParsingEngine::parseBinaryExpression(unsigned int min_precedence, std::unique_pt
             LHS = std::make_unique<AST::FunctionCallExpression>(std::move(m), std::move(args), funcTab_,
                                                                 llvm_context_.get());
         } else {
-            LHS = std::make_unique<AST::BinaryExpression>(std::move(LHS), op, std::move(RHS));
+            LHS = std::make_unique<AST::BinaryExpression>(std::move(LHS), op, std::move(RHS), llvm_context_.get());
         }
     }
 }
@@ -572,7 +572,10 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
             expr = parseIdentifierExpression();
             break;
         case PUNCTUATION:
-            expr = parseParenthesizedExpression();
+            if (is('('))
+                expr = parseParenthesizedExpression();
+            else if (is('{'))
+                expr = parseAggregateLiteralExpression();
             break;
         case FLOAT_LITERAL:
             expr = parseFloatLiteralExpression();
@@ -625,6 +628,9 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement(bool gl
         if (is(EQ)) {
             lexer.advance();
             auto expr = parseExpression();
+            if (dynamic_cast<AST::AggregateLiteralExpression *>(expr.get()) != nullptr) {
+                dynamic_cast<AST::AggregateLiteralExpression *>(expr.get())->set_type(type);
+            }
             init_list[entry] = std::move(expr);
         }
 
@@ -800,4 +806,18 @@ std::string ParsingEngine::mangleFunctionName(AST::FunctionPrototype *proto) {
     }
 
     return mangled;
+}
+
+std::unique_ptr<AST::Expression> ParsingEngine::parseAggregateLiteralExpression() {
+    eat('{');
+    std::vector<std::unique_ptr<AST::Expression>> exprs;
+    while (!is('}')) {
+        exprs.push_back(parseExpression());
+        if (!is(',')) {
+            break;
+        }
+        eat(',');
+    }
+    eat('}');
+    return std::make_unique<AST::AggregateLiteralExpression>(std::move(exprs));
 }

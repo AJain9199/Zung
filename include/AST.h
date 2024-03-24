@@ -68,6 +68,8 @@ namespace AST {
 
     class FloatLiteralExpression;
 
+    class AggregateLiteralExpression;
+
     /*
      * The visitor class for the AST.
      * Each method in the visitor class corresponds to a node in the AST.
@@ -116,6 +118,8 @@ namespace AST {
         virtual void visit(const AST::ExternFunction &) = 0;
 
         virtual void visit(const AST::FloatLiteralExpression &) = 0;
+
+        virtual void visit(const AST::AggregateLiteralExpression &) = 0;
     };
 
     /* Base class for all AST nodes */
@@ -562,7 +566,8 @@ namespace AST {
      */
     class BinaryExpression : public Expression {
     public:
-        BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs);
+        BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs,
+                         llvm::LLVMContext *ctxt);
 
         std::unique_ptr<Expression> LHS;
         Operator op;
@@ -631,6 +636,46 @@ namespace AST {
         TypeWrapper *type(llvm::LLVMContext *context) override {
             return new TypeWrapper(llvm::PointerType::get(*context, 0),
                                    new TypeWrapper(llvm::Type::getInt8Ty(*context)));
+        };
+    };
+
+    class AggregateLiteralExpression : public Expression {
+    public:
+        explicit AggregateLiteralExpression(std::vector<std::unique_ptr<Expression>> e) : elements(std::move(e)) {};
+
+        std::vector<std::unique_ptr<Expression>> elements;
+        TypeWrapper *cast_type = nullptr;
+
+        INJECT_ACCEPT();
+
+        void set_type(TypeWrapper *t) {
+            cast_type = t;
+
+            if (cast_type->type->isArrayTy()) {
+                auto elem_type = cast_type->type->getArrayElementType();
+                for (auto &i : elements) {
+                    if (dynamic_cast<AggregateLiteralExpression *>(i.get())) {
+                        dynamic_cast<AggregateLiteralExpression *>(i.get())->set_type(new TypeWrapper(elem_type));
+                    }
+                }
+            }
+        }
+
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            if (cast_type != nullptr) {
+                return cast_type;
+            }
+
+            std::vector<llvm::Type *> types;
+            types.reserve(elements.size());
+            for (auto &i: elements) {
+                auto t = i->type(context);
+                if (t == nullptr) {
+                    return nullptr;
+                }
+                types.push_back(t->type);
+            }
+            return new TypeWrapper(llvm::StructType::get(*context, types));
         };
     };
 }

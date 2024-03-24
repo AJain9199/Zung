@@ -13,8 +13,13 @@ Function::Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<Com
 
 UnaryExpression::UnaryExpression(Operator o, std::unique_ptr<Expression> op) : op(o), operand(std::move(op)) {}
 
-BinaryExpression::BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs) : LHS(
-        std::move(lhs)), op(o), RHS(std::move(rhs)) {}
+BinaryExpression::BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs,
+                                   llvm::LLVMContext *ctxt) : LHS(
+        std::move(lhs)), op(o), RHS(std::move(rhs)) {
+    if (dynamic_cast<AST::AggregateLiteralExpression *>(rhs.get()) != nullptr) {
+        dynamic_cast<AST::AggregateLiteralExpression *>(rhs.get())->cast_type = LHS->type(ctxt);
+    }
+}
 
 ArrayIndexingExpression::ArrayIndexingExpression(std::unique_ptr<Expression> arr,
                                                  std::vector<std::unique_ptr<Expression>> idx) : array(std::move(arr)),
