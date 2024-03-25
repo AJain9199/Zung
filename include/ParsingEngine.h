@@ -6,6 +6,7 @@
 #include <llvm/IR/Type.h>
 #include "llvm/IR/LLVMContext.h"
 #include <Types.h>
+#include <filesystem>
 
 /*
  * The parsing engine is responsible for parsing the input file and constructing the Abstract Syntax Tree (AST) from the
@@ -15,7 +16,7 @@
  */
 class ParsingEngine {
 public:
-    explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context, const std::string& self_procname) : lexer(filename), selfProcessName(self_procname), llvm_context_(std::move(context)), type_table(nullptr) {
+    explicit ParsingEngine(const std::filesystem::path& filename, std::unique_ptr<llvm::LLVMContext> context, const std::string& self_procname) : lexer(filename.string()), filepath(filename), selfProcessName(self_procname), llvm_context_(std::move(context)), type_table(nullptr) {
         type_table = new std::map<std::string, struct TypeInfo *>();
         funcTab_ = new Symbols::FunctionTable();
         lexer.advance();
@@ -41,6 +42,7 @@ private:
     llvm::StructType *currentStruct{nullptr};
 
     std::string selfProcessName;
+    std::filesystem::path filepath;
 
     std::map<std::basic_string<char>, TypeInfo *> *type_table;
 

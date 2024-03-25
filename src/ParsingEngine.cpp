@@ -862,11 +862,13 @@ void ParsingEngine::handleImport() {
     eat(IMPORT);
     if (is(STR_LITERAL)) {
         std::string file = lexer.identifier();
+        auto new_path = new std::filesystem::path(filepath);
+        new_path->replace_filename(file);
 
         pid_t pid = fork();
 
         if (pid == 0) { // child process that was just created
-            execl(selfProcessName.c_str(), selfProcessName.c_str(), file.c_str(), NULL);
+            execl(selfProcessName.c_str(), selfProcessName.c_str(), new_path->c_str(), NULL);
         }
         lexer.advance();
     } else {
