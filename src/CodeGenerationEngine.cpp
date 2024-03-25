@@ -157,7 +157,7 @@ void CodeGenerationEngine::visit(const AST::Function &function) {
     function.body->accept(*this);
     verifyFunction(*F);
 
-    /* TODO: optimizer pass */
+    fpm_->run(*F, *fam_);
 
     delete function.symbol_table;
 
@@ -272,27 +272,29 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
         i->accept(*this);
         STACK_GET(Function *);
     }
-//
-//    fpm_ = std::make_unique<llvm::FunctionPassManager>();
-//    lam_ = std::make_unique<llvm::LoopAnalysisManager>();
-//    fam_ = std::make_unique<llvm::FunctionAnalysisManager>();
-//    cgam_ = std::make_unique<llvm::CGSCCAnalysisManager>();
-//    mam_ = std::make_unique<llvm::ModuleAnalysisManager>();
-//    pic_ = std::make_unique<llvm::PassInstrumentationCallbacks>();
-//    si_ = std::make_unique<llvm::StandardInstrumentations>(*llvm_context_, false);
-//
-//    fpm_->addPass(llvm::InstCombinePass());
-//    fpm_->addPass(llvm::ReassociatePass());
-//    fpm_->addPass(llvm::GVNPass());
-//    fpm_->addPass(llvm::SimplifyCFGPass());
-//
-//    pb_.registerModuleAnalyses(*mam_);
-//    pb_.registerFunctionAnalyses(*fam_);
-//    pb_.crossRegisterProxies(*lam_, *fam_, *cgam_, *mam_);
-//
-//    mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
-//
-//    mpm_.run(*module_, *mam_);
+
+    fpm_ = std::make_unique<llvm::FunctionPassManager>();
+    lam_ = std::make_unique<llvm::LoopAnalysisManager>();
+    fam_ = std::make_unique<llvm::FunctionAnalysisManager>();
+    cgam_ = std::make_unique<llvm::CGSCCAnalysisManager>();
+    mam_ = std::make_unique<llvm::ModuleAnalysisManager>();
+    pic_ = std::make_unique<llvm::PassInstrumentationCallbacks>();
+    si_ = std::make_unique<llvm::StandardInstrumentations>(*llvm_context_, false);
+
+    fpm_->addPass(llvm::InstCombinePass());
+    fpm_->addPass(llvm::ReassociatePass());
+    fpm_->addPass(llvm::GVNPass());
+    fpm_->addPass(llvm::SimplifyCFGPass());
+
+    pb_.registerModuleAnalyses(*mam_);
+    pb_.registerFunctionAnalyses(*fam_);
+    pb_.registerCGSCCAnalyses(*cgam_);
+    pb_.registerLoopAnalyses(*lam_);
+    pb_.crossRegisterProxies(*lam_, *fam_, *cgam_, *mam_);
+
+    mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+
+    mpm_.run(*module_, *mam_);
 
     std::error_code errorCode;
     llvm::raw_fd_ostream file(outfile, errorCode);
