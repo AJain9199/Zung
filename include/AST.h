@@ -41,6 +41,8 @@ namespace AST {
 
     class ForStatement;
 
+    class WhileStatement;
+
     class DeclarationStatement;
 
     class ExpressionStatement;
@@ -68,6 +70,8 @@ namespace AST {
 
     class FloatLiteralExpression;
 
+    class BooleanLiteralExpression;
+
     class AggregateLiteralExpression;
 
     /*
@@ -93,6 +97,8 @@ namespace AST {
 
         virtual void visit(const AST::ForStatement &) = 0;
 
+        virtual void visit(const AST::WhileStatement &) = 0;
+
         virtual void visit(const AST::ExpressionStatement &) = 0;
 
         virtual void visit(const AST::IfStatement &) = 0;
@@ -112,6 +118,8 @@ namespace AST {
         virtual void visit(const AST::IntegralLiteralExpression &) = 0;
 
         virtual void visit(const AST::StringLiteralExpression &) = 0;
+
+        virtual void visit(const AST::BooleanLiteralExpression &) = 0;
 
         virtual void visit(const AST::TranslationUnit &) = 0;
 
@@ -274,6 +282,16 @@ namespace AST {
         ForStatement(std::unique_ptr<Statement> i, std::unique_ptr<Expression> cond, std::unique_ptr<Expression> up,
                      std::unique_ptr<CompoundStatement> b) : init(std::move(i)), condition(std::move(cond)),
                                                              update(std::move(up)), body(std::move(b)) {};
+
+        INJECT_ACCEPT();
+    };
+
+    class WhileStatement : public Statement {
+    public:
+        std::unique_ptr<Expression> condition;
+        std::unique_ptr<CompoundStatement> body;
+
+        WhileStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> b) : condition(std::move(cond)), body(std::move(b)) {};
 
         INJECT_ACCEPT();
     };
@@ -676,6 +694,19 @@ namespace AST {
                 types.push_back(t->type);
             }
             return new TypeWrapper(llvm::StructType::get(*context, types));
+        };
+    };
+
+    class BooleanLiteralExpression : public Expression {
+    public:
+        explicit BooleanLiteralExpression(bool v) : val(v) {};
+
+        bool val;
+
+        INJECT_ACCEPT();
+
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return new TypeWrapper(llvm::Type::getInt1Ty(*context));
         };
     };
 }

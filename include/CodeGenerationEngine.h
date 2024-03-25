@@ -23,7 +23,7 @@
  * */
 #define RETURNS(x) void
 
-typedef std::map<std::string, AST::FunctionPrototype*> func_table_t;
+typedef std::map<std::string, AST::FunctionPrototype *> func_table_t;
 
 class CodeGenerationEngine;
 
@@ -47,7 +47,7 @@ private:
 
     void get_llvm_function(const std::string &name);
 
-    AST::Expression* lhs;
+    AST::Expression *lhs;
 
     static llvm::AllocaInst *
     create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type);
@@ -60,7 +60,9 @@ private:
         explicit LValueCodeGenerationEngine(CodeGenerationEngine *engine) : engine_(engine) {}
 
         void visit(const AST::VariableExpression &) override;
+
         void visit(const AST::FieldAccessExpression &) override;
+
         void visit(const AST::AbstractNode &) override {};
 
         void visit(const AST::TranslationUnit &) override {};
@@ -95,9 +97,13 @@ private:
 
         void visit(const AST::StringLiteralExpression &) override {};
 
-       void visit(const AST::FloatLiteralExpression &) override {};
+        void visit(const AST::FloatLiteralExpression &) override {};
 
-            void visit(const AST::AggregateLiteralExpression &) override {};
+        void visit(const AST::AggregateLiteralExpression &) override {};
+
+        void visit(const AST::WhileStatement &) override {};
+
+        void visit(const AST::BooleanLiteralExpression &) override {};
     };
 
     LValueCodeGenerationEngine *rvalue_engine_;
@@ -109,7 +115,10 @@ public:
                                                                                         std::make_unique<llvm::IRBuilder<>>(
                                                                                                 *llvm_context_)),
                                                                                 module_(std::make_unique<llvm::Module>(
-                                                                                        "main", *llvm_context_)), rvalue_engine_(new LValueCodeGenerationEngine(this)) {}
+                                                                                        "main", *llvm_context_)),
+                                                                                rvalue_engine_(
+                                                                                        new LValueCodeGenerationEngine(
+                                                                                                this)) {}
 
     void visit(const AST::AbstractNode &) override {};
 
@@ -126,6 +135,8 @@ public:
     void visit(const AST::ReturnStatement &) override;
 
     void visit(const AST::ForStatement &) override;
+
+    void visit(const AST::WhileStatement &) override;
 
     void visit(const AST::DeclarationStatement &) override;
 
@@ -152,6 +163,8 @@ public:
     RETURNS(llvm::Value *) visit(const AST::AggregateLiteralExpression &) override;
 
     void visit(const AST::FieldAccessExpression &) override;
+
+    void visit(const AST::BooleanLiteralExpression &) override;
 
     /* The following methods are used to manage the internal stack of the code generation engine. */
     /*

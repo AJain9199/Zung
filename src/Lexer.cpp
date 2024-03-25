@@ -192,6 +192,17 @@ TokenType Lexer::getToken() {
             keyword_ = CLASS;
         } else if(identifier_ == "packed") {
             keyword_ = PACKED;
+        } else if (identifier_ == "while") {
+            keyword_ = WHILE;
+        } else if (identifier_ == "bool") {
+            default_type_ = BOOL;
+            return DEFAULT_TYPE;
+        } else if (identifier_ == "true") {
+            boolean_val_ = true;
+            return BOOLEAN_LITERAL;
+        } else if (identifier_ == "false") {
+            boolean_val_ = false;
+            return BOOLEAN_LITERAL;
         }else {
             return IDENTIFIER;
         }
@@ -281,4 +292,8 @@ enum DeclarationSpecifier Lexer::declaration_specifier() const {
 
 double Lexer::float_literal() const {
     return float_val_;
+}
+
+bool Lexer::boolean_literal() const {
+    return boolean_val_;
 }

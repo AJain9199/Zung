@@ -261,6 +261,9 @@ TypeWrapper *ParsingEngine::parseType() {
             case DOUBLE:
                 basic_type = llvm::Type::getDoubleTy(*llvm_context_);
                 break;
+            case BOOL:
+                basic_type = llvm::Type::getInt1Ty(*llvm_context_);
+                break;
         }
     } else { // token is an identifier
         std::string id = eat_identifier();
@@ -561,7 +564,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseExpressionStatement() {
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
     std::unique_ptr<AST::Expression> expr = nullptr;
-    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL, FLOAT_LITERAL)) {
+    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL, FLOAT_LITERAL, BOOLEAN_LITERAL)) {
         case NUMERIC_LITERAL:
             expr = parseNumericLiteralExpression();
             break;
@@ -579,6 +582,9 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
             break;
         case FLOAT_LITERAL:
             expr = parseFloatLiteralExpression();
+            break;
+        case BOOLEAN_LITERAL:
+            expr = parseBooleanLiteralExpression();
             break;
         default:
             std::cerr << "Unexpected token";
@@ -820,4 +826,19 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseAggregateLiteralExpression(
     }
     eat('}');
     return std::make_unique<AST::AggregateLiteralExpression>(std::move(exprs));
+}
+
+std::unique_ptr<AST::Statement> ParsingEngine::parseWhileStatement() {
+    eat(WHILE);
+    eat('(');
+    auto cond = parseExpression();
+    eat(')');
+    auto body = parseCompoundStatement();
+    return std::make_unique<AST::WhileStatement>(std::move(cond), std::move(body));
+}
+
+std::unique_ptr<AST::Expression> ParsingEngine::parseBooleanLiteralExpression() {
+    auto val = std::make_unique<AST::BooleanLiteralExpression>(lexer.boolean_literal());
+    lexer.advance();
+    return val;
 }

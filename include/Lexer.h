@@ -68,7 +68,9 @@ enum Keyword {
     EXTERN,
     CLASS,
     PACKED,
-    BOOL
+    WHILE,
+    TRUE,
+    FALSE
 };
 
 enum DeclarationSpecifier {
@@ -81,6 +83,7 @@ enum DefaultType {
     CHAR,
     VOID,
     DOUBLE,
+    BOOL
 };
 
 class Lexer {
@@ -100,6 +103,7 @@ public:
     [[nodiscard]] int numeric_literal() const;
     [[nodiscard]] enum DeclarationSpecifier declaration_specifier() const;
     [[nodiscard]] enum DefaultType default_type() const;
+    [[nodiscard]] bool boolean_literal() const;
     [[nodiscard]] double float_literal() const;
 
 private:
@@ -112,6 +116,7 @@ private:
 
     char current_char_ = 0;
     char char_value_ = 0;
+    bool boolean_val_ = false;
     std::string identifier_{};
     enum Operator operator_{};
     int int_val_ = 0;

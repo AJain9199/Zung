@@ -66,6 +66,7 @@ private:
     std::unique_ptr<AST::Expression> parseExpression();
     std::unique_ptr<AST::Expression> parseFloatLiteralExpression();
     std::unique_ptr<AST::Expression> parseAggregateLiteralExpression();
+    std::unique_ptr<AST::Expression> parseBooleanLiteralExpression();
 
     /* Parsing statements */
     std::unique_ptr<AST::Statement> parseStatement();
@@ -74,6 +75,7 @@ private:
     std::unique_ptr<AST::Statement> parseExpressionStatement();
     std::unique_ptr<AST::Statement> parseIfStatement();
     std::unique_ptr<AST::Statement> parseDeclarationStatement(bool global=false);
+    std::unique_ptr<AST::Statement> parseWhileStatement();
 
 
     void eat(TokenType t);

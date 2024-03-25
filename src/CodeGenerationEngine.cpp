@@ -351,15 +351,27 @@ void CodeGenerationEngine::visit(const AST::ForStatement &statement) {
     statement.init->accept(*this);
 
     auto *loop = BasicBlock::Create(*llvm_context_, "loop", builder_->GetInsertBlock()->getParent());
+    auto *cond = BasicBlock::Create(*llvm_context_, "cond", builder_->GetInsertBlock()->getParent());
+    auto *update = BasicBlock::Create(*llvm_context_, "update", builder_->GetInsertBlock()->getParent());
     auto *exit = BasicBlock::Create(*llvm_context_, "exit", builder_->GetInsertBlock()->getParent());
-    builder_->CreateBr(loop);
+
+    builder_->CreateBr(cond);
+
+    builder_->SetInsertPoint(cond);
+
+    statement.condition->accept(*this);
+    auto *cond_val = STACK_GET(Value *);
+    builder_->CreateCondBr(cond_val, loop, exit);
+
     builder_->SetInsertPoint(loop);
     statement.body->accept(*this);
+
+    builder_->CreateBr(update);
+    builder_->SetInsertPoint(update);
     statement.update->accept(*this);
     STACK_GET(Value *);
-    statement.condition->accept(*this);
-    auto cond = STACK_GET(Value *);
-    builder_->CreateCondBr(cond, loop, exit);
+    builder_->CreateBr(cond);
+
     builder_->SetInsertPoint(exit);
 }
 
@@ -373,16 +385,16 @@ void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
         auto else_block = BasicBlock::Create(*llvm_context_, "else", builder_->GetInsertBlock()->getParent());
         builder_->CreateCondBr(cond, if_block, else_block);
 
-        builder_->SetInsertPoint(if_block);
-        statement.body->accept(*this);
-        builder_->CreateBr(exit);
-
         builder_->SetInsertPoint(else_block);
         statement.else_body->accept(*this);
         builder_->CreateBr(exit);
     } else {
         builder_->CreateCondBr(cond, if_block, exit);
     }
+
+    builder_->SetInsertPoint(if_block);
+    statement.body->accept(*this);
+    builder_->CreateBr(exit);
 
     builder_->SetInsertPoint(exit);
 }
@@ -472,4 +484,26 @@ RETURNS(llvm::Value *) CodeGenerationEngine::visit(const AST::AggregateLiteralEx
             STACK_RET(nullptr);
         }
     }
+}
+
+void CodeGenerationEngine::visit(const AST::WhileStatement &statement) {
+    auto *loop = BasicBlock::Create(*llvm_context_, "loop", builder_->GetInsertBlock()->getParent());
+    auto *cond = BasicBlock::Create(*llvm_context_, "cond", builder_->GetInsertBlock()->getParent());
+    auto *exit = BasicBlock::Create(*llvm_context_, "exit", builder_->GetInsertBlock()->getParent());
+    builder_->CreateBr(loop);
+    builder_->SetInsertPoint(cond);
+
+    statement.condition->accept(*this);
+    auto *cond_val = STACK_GET(Value *);
+    builder_->CreateCondBr(cond_val, loop, exit);
+
+    builder_->SetInsertPoint(loop);
+    statement.body->accept(*this);
+    builder_->CreateBr(cond);
+
+    builder_->SetInsertPoint(exit);
+}
+
+void CodeGenerationEngine::visit(const AST::BooleanLiteralExpression &expression) {
+    STACK_RET(ConstantInt::get(Type::getInt1Ty(*llvm_context_), expression.val));
 }
