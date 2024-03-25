@@ -104,6 +104,8 @@ private:
         void visit(const AST::WhileStatement &) override {};
 
         void visit(const AST::BooleanLiteralExpression &) override {};
+
+        void visit(const AST::NullLiteralExpression &) override {};
     };
 
     LValueCodeGenerationEngine *rvalue_engine_;
@@ -165,6 +167,8 @@ public:
     void visit(const AST::FieldAccessExpression &) override;
 
     void visit(const AST::BooleanLiteralExpression &) override;
+
+    void visit(const AST::NullLiteralExpression &) override;
 
     /* The following methods are used to manage the internal stack of the code generation engine. */
     /*

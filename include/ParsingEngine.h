@@ -67,6 +67,7 @@ private:
     std::unique_ptr<AST::Expression> parseFloatLiteralExpression();
     std::unique_ptr<AST::Expression> parseAggregateLiteralExpression();
     std::unique_ptr<AST::Expression> parseBooleanLiteralExpression();
+    std::unique_ptr<AST::Expression> parseNullLiteralExpression();
 
     /* Parsing statements */
     std::unique_ptr<AST::Statement> parseStatement();

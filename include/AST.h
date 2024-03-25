@@ -74,6 +74,8 @@ namespace AST {
 
     class AggregateLiteralExpression;
 
+    class NullLiteralExpression;
+
     /*
      * The visitor class for the AST.
      * Each method in the visitor class corresponds to a node in the AST.
@@ -128,6 +130,8 @@ namespace AST {
         virtual void visit(const AST::FloatLiteralExpression &) = 0;
 
         virtual void visit(const AST::AggregateLiteralExpression &) = 0;
+
+        virtual void visit(const AST::NullLiteralExpression &) = 0;
     };
 
     /* Base class for all AST nodes */
@@ -708,6 +712,17 @@ namespace AST {
         TypeWrapper *type(llvm::LLVMContext *context) override {
             return new TypeWrapper(llvm::Type::getInt1Ty(*context));
         };
+    };
+
+    class NullLiteralExpression : public Expression {
+    public:
+        NullLiteralExpression() = default;
+
+        INJECT_ACCEPT();
+
+        TypeWrapper *type(llvm::LLVMContext *context) override {
+            return new TypeWrapper(llvm::PointerType::get(*context, 0));
+        }
     };
 }
 

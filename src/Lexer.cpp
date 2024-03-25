@@ -203,7 +203,9 @@ TokenType Lexer::getToken() {
         } else if (identifier_ == "false") {
             boolean_val_ = false;
             return BOOLEAN_LITERAL;
-        }else {
+        } else if (identifier_ == "null") {
+            return NULL_LITERAL;
+        } else {
             return IDENTIFIER;
         }
 

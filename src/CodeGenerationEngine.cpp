@@ -507,3 +507,7 @@ void CodeGenerationEngine::visit(const AST::WhileStatement &statement) {
 void CodeGenerationEngine::visit(const AST::BooleanLiteralExpression &expression) {
     STACK_RET(ConstantInt::get(Type::getInt1Ty(*llvm_context_), expression.val));
 }
+
+void CodeGenerationEngine::visit(const AST::NullLiteralExpression &) {
+    STACK_RET(ConstantPointerNull::getNullValue(PointerType::get(*llvm_context_, 0)));
+}

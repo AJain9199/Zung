@@ -564,7 +564,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseExpressionStatement() {
  * */
 std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
     std::unique_ptr<AST::Expression> expr = nullptr;
-    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL, FLOAT_LITERAL, BOOLEAN_LITERAL)) {
+    switch (is(NUMERIC_LITERAL, IDENTIFIER, PUNCTUATION, STR_LITERAL, FLOAT_LITERAL, BOOLEAN_LITERAL, NULL_LITERAL)) {
         case NUMERIC_LITERAL:
             expr = parseNumericLiteralExpression();
             break;
@@ -585,6 +585,9 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePrimaryExpression() {
             break;
         case BOOLEAN_LITERAL:
             expr = parseBooleanLiteralExpression();
+            break;
+        case NULL_LITERAL:
+            expr = parseNullLiteralExpression();
             break;
         default:
             std::cerr << "Unexpected token";
@@ -841,4 +844,10 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseBooleanLiteralExpression() 
     auto val = std::make_unique<AST::BooleanLiteralExpression>(lexer.boolean_literal());
     lexer.advance();
     return val;
+}
+
+std::unique_ptr<AST::Expression> ParsingEngine::parseNullLiteralExpression() {
+    auto x = std::make_unique<AST::NullLiteralExpression>();
+    lexer.advance();
+    return x;
 }

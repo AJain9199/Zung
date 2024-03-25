@@ -16,6 +16,7 @@ enum TokenType {
     STR_LITERAL, // ".+"
     BOOLEAN_LITERAL, // true, false
     FLOAT_LITERAL,
+    NULL_LITERAL,
 
     /* operators */
     OP,
@@ -68,9 +69,7 @@ enum Keyword {
     EXTERN,
     CLASS,
     PACKED,
-    WHILE,
-    TRUE,
-    FALSE
+    WHILE
 };
 
 enum DeclarationSpecifier {
