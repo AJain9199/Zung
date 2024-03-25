@@ -131,9 +131,11 @@ private:
 
     LValueCodeGenerationEngine *rvalue_engine_;
 
+    std::string outfile;
+
 
 public:
-    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context) : llvm_context_(std::move(context)),
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, std::string out_name) : outfile(out_name), llvm_context_(std::move(context)),
                                                                                 builder_(
                                                                                         std::make_unique<llvm::IRBuilder<>>(
                                                                                                 *llvm_context_)),

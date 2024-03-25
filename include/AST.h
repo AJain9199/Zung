@@ -193,6 +193,10 @@ namespace AST {
         ~FunctionPrototype() override {
             delete return_type;
         }
+
+        [[nodiscard]] virtual unsigned long num_args() const {
+            return args.size();
+        }
     };
 
     /*
@@ -209,6 +213,10 @@ namespace AST {
             for (auto &arg: typed_args) {
                 delete arg;
             }
+        }
+
+        [[nodiscard]] unsigned long num_args() const override {
+            return typed_args.size();
         }
 
         INJECT_ACCEPT();

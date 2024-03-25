@@ -4,6 +4,7 @@
 #include <llvm/IR/LLVMContext.h>
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 
 int main(int argc, char **argv) {
     auto parse_pre = std::chrono::high_resolution_clock::now();
@@ -15,7 +16,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    ParsingEngine parse(argv[1], std::move(context));
+    ParsingEngine parse(argv[1], std::move(context), argv[0]);
     auto p = parse.parseTranslationUnit();
     auto parse_post = std::chrono::high_resolution_clock::now();
 
@@ -31,10 +32,12 @@ int main(int argc, char **argv) {
     parse.get_context(context);
 
     auto codegen_pre = std::chrono::high_resolution_clock::now();
-    CodeGenerationEngine cge(std::move(context));
+    std::filesystem::path path(argv[1]);
+    path.replace_extension(".ll");
+    CodeGenerationEngine cge(std::move(context), path.string());
     p->accept(cge);
     delete p;
     auto codegen_post = std::chrono::high_resolution_clock::now();
     std::cout << "Code generation took " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - codegen_pre).count() << "ms" << std::endl;
-    std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - parse_pre).count() << "ms" << std::endl;
+    std::cout << "Total time for compiling " << argv[1] << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(codegen_post - parse_pre).count() << "ms" << std::endl;
 }

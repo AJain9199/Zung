@@ -226,9 +226,11 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
     get_llvm_function(std::get<AST::FunctionPrototype *>(expression.callee->func)->name);
     auto F = STACK_GET(Function *);
 
-    if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
-        throw std::runtime_error("Incorrect number of arguments");
-    }
+    auto x = F->arg_size();
+
+//    if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
+//        throw std::runtime_error("Incorrect number of arguments");
+//    }
 
     std::vector<Value *> args(expression.args.size());
     int i = 0;
@@ -270,11 +272,30 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
         i->accept(*this);
         STACK_GET(Function *);
     }
-
-    mpm_.run(*module_, *mam_);
+//
+//    fpm_ = std::make_unique<llvm::FunctionPassManager>();
+//    lam_ = std::make_unique<llvm::LoopAnalysisManager>();
+//    fam_ = std::make_unique<llvm::FunctionAnalysisManager>();
+//    cgam_ = std::make_unique<llvm::CGSCCAnalysisManager>();
+//    mam_ = std::make_unique<llvm::ModuleAnalysisManager>();
+//    pic_ = std::make_unique<llvm::PassInstrumentationCallbacks>();
+//    si_ = std::make_unique<llvm::StandardInstrumentations>(*llvm_context_, false);
+//
+//    fpm_->addPass(llvm::InstCombinePass());
+//    fpm_->addPass(llvm::ReassociatePass());
+//    fpm_->addPass(llvm::GVNPass());
+//    fpm_->addPass(llvm::SimplifyCFGPass());
+//
+//    pb_.registerModuleAnalyses(*mam_);
+//    pb_.registerFunctionAnalyses(*fam_);
+//    pb_.crossRegisterProxies(*lam_, *fam_, *cgam_, *mam_);
+//
+//    mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
+//
+//    mpm_.run(*module_, *mam_);
 
     std::error_code errorCode;
-    llvm::raw_fd_ostream file("../output.ll", errorCode);
+    llvm::raw_fd_ostream file(outfile, errorCode);
     module_->print(file, nullptr);
 }
 
@@ -328,10 +349,10 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
 }
 
 void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
-    std::vector<llvm::Type *> args(function.args.size());
+    std::vector<llvm::Type *> args(function.typed_args.size());
     uint i = 0;
-    for (const auto &arg: function.args) {
-        args[i++] = arg->type->type;
+    for (const auto &arg: function.typed_args) {
+        args[i++] = arg->type;
     }
 
     FunctionType *FT = FunctionType::get(function.return_type->type, args, function.var_args);

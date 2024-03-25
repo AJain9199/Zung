@@ -15,7 +15,7 @@
  */
 class ParsingEngine {
 public:
-    explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context) : lexer(filename), llvm_context_(std::move(context)), type_table(nullptr) {
+    explicit ParsingEngine(const std::string& filename, std::unique_ptr<llvm::LLVMContext> context, const std::string& self_procname) : lexer(filename), selfProcessName(self_procname), llvm_context_(std::move(context)), type_table(nullptr) {
         type_table = new std::map<std::string, struct TypeInfo *>();
         funcTab_ = new Symbols::FunctionTable();
         lexer.advance();
@@ -39,6 +39,8 @@ public:
 private:
     Lexer lexer;
     llvm::StructType *currentStruct{nullptr};
+
+    std::string selfProcessName;
 
     std::map<std::basic_string<char>, TypeInfo *> *type_table;
 
@@ -77,6 +79,8 @@ private:
     std::unique_ptr<AST::Statement> parseIfStatement();
     std::unique_ptr<AST::Statement> parseDeclarationStatement(bool global=false);
     std::unique_ptr<AST::Statement> parseWhileStatement();
+
+    void handleImport();
 
 
     void eat(TokenType t);

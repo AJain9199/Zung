@@ -4,6 +4,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include <iostream>
 #include <regex>
+#include <unistd.h>
+#include <sys/types.h>
 
 std::map<enum Operator, int> ParsingEngine::precedence = {
         {EQ,          1},
@@ -53,6 +55,8 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
         } else if (is(VAR)) {
             auto s = parseDeclarationStatement(true);
             translation_unit->global_declarations.push_back(std::move(s));
+        } else if (is(IMPORT)) {
+            handleImport();
         } else {
             std::cerr << "Unexpected token" << std::endl;
         }
@@ -663,6 +667,8 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseStatement() {
             return parseReturnStatement();
         } else if (lexer.keyword() == FOR) {
             return parseForStatement();
+        } else if (lexer.keyword() == WHILE) {
+            return parseWhileStatement();
         } else {
             std::cerr << "Unexpected token" << std::endl;
             return nullptr;
@@ -850,4 +856,20 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseNullLiteralExpression() {
     auto x = std::make_unique<AST::NullLiteralExpression>();
     lexer.advance();
     return x;
+}
+
+void ParsingEngine::handleImport() {
+    eat(IMPORT);
+    if (is(STR_LITERAL)) {
+        std::string file = lexer.identifier();
+
+        pid_t pid = fork();
+
+        if (pid == 0) { // child process that was just created
+            execl(selfProcessName.c_str(), selfProcessName.c_str(), file.c_str(), NULL);
+        }
+        lexer.advance();
+    } else {
+        std::cerr << "Unexpected token" << std::endl;
+    }
 }

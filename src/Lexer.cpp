@@ -205,7 +205,10 @@ TokenType Lexer::getToken() {
             return BOOLEAN_LITERAL;
         } else if (identifier_ == "null") {
             return NULL_LITERAL;
-        } else {
+        } else if (identifier_ == "import") {
+            keyword_ = IMPORT;
+            return KEYWORD;
+        }else {
             return IDENTIFIER;
         }
 

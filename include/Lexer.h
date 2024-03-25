@@ -69,7 +69,8 @@ enum Keyword {
     EXTERN,
     CLASS,
     PACKED,
-    WHILE
+    WHILE,
+    IMPORT
 };
 
 enum DeclarationSpecifier {
