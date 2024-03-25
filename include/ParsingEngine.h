@@ -16,7 +16,7 @@
  */
 class ParsingEngine {
 public:
-    explicit ParsingEngine(const std::filesystem::path& filename, std::unique_ptr<llvm::LLVMContext> context, const std::string& self_procname) : lexer(filename.string()), filepath(filename), selfProcessName(self_procname), llvm_context_(std::move(context)), type_table(nullptr) {
+    explicit ParsingEngine(const std::filesystem::path& filename, const std::filesystem::path& output_dir, std::unique_ptr<llvm::LLVMContext> context, const std::string& self_procname) : output_directory(output_dir), lexer(filename.string()), filepath(filename), selfProcessName(self_procname), llvm_context_(std::move(context)), type_table(nullptr) {
         type_table = new std::map<std::string, struct TypeInfo *>();
         funcTab_ = new Symbols::FunctionTable();
         lexer.advance();
@@ -43,6 +43,7 @@ private:
 
     std::string selfProcessName;
     std::filesystem::path filepath;
+    const std::filesystem::path& output_directory;
 
     std::map<std::basic_string<char>, TypeInfo *> *type_table;
 

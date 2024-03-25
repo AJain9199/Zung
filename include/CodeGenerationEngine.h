@@ -23,6 +23,7 @@
 #include <AST.h>
 #include <stack>
 #include <any>
+#include <utility>
 
 /*
  * macro to define the return type of the visitor subroutines.
@@ -135,7 +136,7 @@ private:
 
 
 public:
-    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, std::string out_name) : outfile(out_name), llvm_context_(std::move(context)),
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, std::string out_name) : outfile(std::move(out_name)), llvm_context_(std::move(context)),
                                                                                 builder_(
                                                                                         std::make_unique<llvm::IRBuilder<>>(
                                                                                                 *llvm_context_)),
