@@ -9,9 +9,17 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Passes/StandardInstrumentations.h>
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include <AST.h>
 #include <stack>
 #include <any>
@@ -40,6 +48,19 @@ private:
     std::unique_ptr<llvm::LLVMContext> llvm_context_;
     std::unique_ptr<llvm::IRBuilder<>> builder_;
     std::unique_ptr<llvm::Module> module_;
+
+    /* Optimization passes */
+    std::unique_ptr<llvm::FunctionPassManager> fpm_;
+    std::unique_ptr<llvm::LoopAnalysisManager> lam_;
+    std::unique_ptr<llvm::FunctionAnalysisManager> fam_;
+    std::unique_ptr<llvm::CGSCCAnalysisManager> cgam_;
+    std::unique_ptr<llvm::ModuleAnalysisManager> mam_;
+    std::unique_ptr<llvm::PassInstrumentationCallbacks> pic_;
+    std::unique_ptr<llvm::StandardInstrumentations> si_;
+
+    llvm::PassBuilder pb_;
+
+    llvm::ModulePassManager mpm_;
 
     std::map<Symbols::SymbolTableEntry *, llvm::GlobalVariable *> global_symbol_table_;
     std::map<Symbols::SymbolTableEntry *, llvm::AllocaInst *> symbol_table_;
@@ -120,7 +141,26 @@ public:
                                                                                         "main", *llvm_context_)),
                                                                                 rvalue_engine_(
                                                                                         new LValueCodeGenerationEngine(
-                                                                                                this)) {}
+                                                                                                this)) {
+        fpm_ = std::make_unique<llvm::FunctionPassManager>();
+        lam_ = std::make_unique<llvm::LoopAnalysisManager>();
+        fam_ = std::make_unique<llvm::FunctionAnalysisManager>();
+        cgam_ = std::make_unique<llvm::CGSCCAnalysisManager>();
+        mam_ = std::make_unique<llvm::ModuleAnalysisManager>();
+        pic_ = std::make_unique<llvm::PassInstrumentationCallbacks>();
+        si_ = std::make_unique<llvm::StandardInstrumentations>(*llvm_context_, false);
+
+        fpm_->addPass(llvm::InstCombinePass());
+        fpm_->addPass(llvm::ReassociatePass());
+        fpm_->addPass(llvm::GVNPass());
+        fpm_->addPass(llvm::SimplifyCFGPass());
+
+        pb_.registerModuleAnalyses(*mam_);
+        pb_.registerFunctionAnalyses(*fam_);
+        pb_.crossRegisterProxies(*lam_, *fam_, *cgam_, *mam_);
+
+        mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
+    }
 
     void visit(const AST::AbstractNode &) override {};
 

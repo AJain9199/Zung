@@ -188,9 +188,9 @@ TokenType Lexer::getToken() {
             return KEYWORD;
         } else if (identifier_ == "if") {
             keyword_ = IF;
-        } else if(identifier_ == "class") {
+        } else if (identifier_ == "class") {
             keyword_ = CLASS;
-        } else if(identifier_ == "packed") {
+        } else if (identifier_ == "packed") {
             keyword_ = PACKED;
         } else if (identifier_ == "while") {
             keyword_ = WHILE;
@@ -230,7 +230,7 @@ TokenType Lexer::getToken() {
         }
         rewind();
 
-        int_val_ = (int)strtol(identifier_.c_str(), nullptr, 10);
+        int_val_ = (int) strtol(identifier_.c_str(), nullptr, 10);
         return NUMERIC_LITERAL;
     }
 

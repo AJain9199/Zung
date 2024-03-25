@@ -87,7 +87,8 @@ enum DefaultType {
 
 class Lexer {
 public:
-    explicit Lexer(const std::string& filename);
+    explicit Lexer(const std::string &filename);
+
     void advance();
 
     bool hasMoreTokens();
@@ -96,19 +97,30 @@ public:
 
     /* Getters for accessing token values */
     [[nodiscard]] enum Keyword keyword() const;
+
     [[nodiscard]] std::string identifier() const;
+
     [[nodiscard]] enum Operator operator_token() const;
+
     [[nodiscard]] char character() const;
+
     [[nodiscard]] int numeric_literal() const;
+
     [[nodiscard]] enum DeclarationSpecifier declaration_specifier() const;
+
     [[nodiscard]] enum DefaultType default_type() const;
+
     [[nodiscard]] bool boolean_literal() const;
+
     [[nodiscard]] double float_literal() const;
 
 private:
     enum TokenType getToken();
+
     void next();
+
     void rewind(int pos);
+
     void rewind();
 
     std::ifstream filestream_;

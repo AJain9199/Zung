@@ -271,6 +271,7 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
         STACK_GET(Function *);
     }
 
+    mpm_.run(*module_, *mam_);
 
     std::error_code errorCode;
     llvm::raw_fd_ostream file("../output.ll", errorCode);

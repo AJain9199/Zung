@@ -5,11 +5,17 @@
 #include <iostream>
 #include <chrono>
 
-int main() {
+int main(int argc, char **argv) {
     auto parse_pre = std::chrono::high_resolution_clock::now();
 
     std::unique_ptr<llvm::LLVMContext> context = std::make_unique<llvm::LLVMContext>();
-    ParsingEngine parse("../test.zng", std::move(context));
+
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        return 1;
+    }
+
+    ParsingEngine parse(argv[1], std::move(context));
     auto p = parse.parseTranslationUnit();
     auto parse_post = std::chrono::high_resolution_clock::now();
 
