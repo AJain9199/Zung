@@ -867,10 +867,10 @@ void ParsingEngine::handleImport() {
 
         pid_t pid = fork();
 
-        std::cout << output_directory;
-
         if (pid == 0) { // child process that was just created
-            execl(selfProcessName.c_str(), selfProcessName.c_str(), new_path->c_str(), "-o", output_directory.c_str(), NULL);
+            args_[0] = (char *)selfProcessName.c_str();
+            args_[1] = (char *)new_path->c_str();
+            execv(selfProcessName.c_str(), args_);
         }
         lexer.advance();
     } else {

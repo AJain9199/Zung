@@ -1,6 +1,14 @@
 #include <CodeGenerationEngine.h>
 #include <iostream>
 #include <llvm/IRPrinter/IRPrintingPasses.h>
+#include <llvm/Support/TargetSelect.h>
+#include <filesystem>
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/IR/LegacyPassManager.h"
 
 #define STACK_RET(x) stack_return(x); return
 #define STACK_GET(x) (stack_get<x>())
@@ -295,10 +303,6 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
     mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
 
     mpm_.run(*module_, *mam_);
-
-    std::error_code errorCode;
-    llvm::raw_fd_ostream file(outfile, errorCode);
-    module_->print(file, nullptr);
 }
 
 void CodeGenerationEngine::get_llvm_function(const std::string &name) {
@@ -534,4 +538,61 @@ void CodeGenerationEngine::visit(const AST::BooleanLiteralExpression &expression
 
 void CodeGenerationEngine::visit(const AST::NullLiteralExpression &) {
     STACK_RET(ConstantPointerNull::getNullValue(PointerType::get(*llvm_context_, 0)));
+}
+
+void CodeGenerationEngine::writeCode(std::filesystem::path &filename, const std::string &target_triple, int filetype) {
+    CodeGenFileType ft;
+    switch (filetype) {
+        case 0:
+            filename.replace_extension(".s");
+            ft = CodeGenFileType::AssemblyFile;
+            break;
+        case 1:
+            filename.replace_extension(".o");
+            ft = CodeGenFileType::ObjectFile;
+            break;
+        case 2: {
+            filename.replace_extension(".ll");
+            std::error_code error;
+            raw_fd_ostream dest(filename.string(), error, sys::fs::OF_None);
+            module_->print(dest, nullptr);
+            return;
+        }
+        default:
+            throw std::runtime_error("Invalid file type");
+    }
+
+    InitializeAllTargetInfos();
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+    InitializeAllAsmParsers();
+    InitializeAllAsmPrinters();
+
+    std::string error;
+    auto target = TargetRegistry::lookupTarget(target_triple, error);
+
+    if (!target) {
+        throw std::runtime_error("Could not find target: " + target_triple);
+    }
+
+    auto cpu = "generic";
+    auto features = "";
+    TargetOptions opt;
+    auto TargetMachine = target->createTargetMachine(target_triple, cpu, features, opt, Reloc::PIC_);
+
+    module_->setDataLayout(TargetMachine->createDataLayout());
+    module_->setTargetTriple(target_triple);
+
+    std::error_code ec;
+    raw_fd_ostream dest(filename.string(), ec, sys::fs::OF_None);
+
+    if (ec) {
+        throw std::runtime_error("Could not open file: " + ec.message());
+    }
+
+    legacy::PassManager pm;
+    TargetMachine->addPassesToEmitFile(pm, dest, nullptr, ft);
+
+    pm.run(*module_);
+    dest.flush();
 }

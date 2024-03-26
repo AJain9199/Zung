@@ -13,6 +13,10 @@ char *getCmdOption(char **begin, char **end, const std::string &option) {
     return nullptr;
 }
 
+bool cmdOptionExists(char **begin, char **end, const std::string &option) {
+    return std::find(begin, end, option) != end;
+}
+
 int main(int argc, char **argv) {
     auto parse_pre = std::chrono::high_resolution_clock::now();
 
@@ -23,9 +27,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    char *opt = getCmdOption(argv, argv + argc, "-o");
+    char *build_dir = getCmdOption(argv, argv + argc, "-o");
 
-    ParsingEngine parse(argv[1], opt, std::move(context), argv[0]);
+    char **args = (char **) malloc(sizeof(char *) * argc + 1);
+    for (int i = 2; i < argc; i++) {
+        args[i] = argv[i];
+    }
+    args[argc] = nullptr;
+
+    ParsingEngine parse(argv[1], args, std::move(context), argv[0]);
     auto p = parse.parseTranslationUnit();
     auto parse_post = std::chrono::high_resolution_clock::now();
 
@@ -43,13 +53,23 @@ int main(int argc, char **argv) {
     parse.get_context(context);
 
     auto codegen_pre = std::chrono::high_resolution_clock::now();
+
+    int filetype = 1;
+    if (cmdOptionExists(argv, argv + argc, "-S")) {
+        filetype = 0;
+    } else if (cmdOptionExists(argv, argv + argc, "-emit-llvm")) {
+        filetype = 2;
+    }
+
     std::filesystem::path path(argv[1]);
-    path.replace_extension(".ll");
+
     std::filesystem::path out_dir;
-    out_dir = path.parent_path() / opt;
+    out_dir = path.parent_path() / build_dir;
     out_dir /= path.filename();
-    CodeGenerationEngine cge(std::move(context), out_dir.string());
+
+    CodeGenerationEngine cge(std::move(context));
     p->accept(cge);
+    cge.writeCode(out_dir, getCmdOption(argv, argv + argc, "-target"), filetype);
     delete p;
     auto codegen_post = std::chrono::high_resolution_clock::now();
     std::cout << "Code generation took "

@@ -24,6 +24,7 @@
 #include <stack>
 #include <any>
 #include <utility>
+#include <filesystem>
 
 /*
  * macro to define the return type of the visitor subroutines.
@@ -132,11 +133,9 @@ private:
 
     LValueCodeGenerationEngine *rvalue_engine_;
 
-    std::string outfile;
-
 
 public:
-    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, std::string out_name) : outfile(std::move(out_name)), llvm_context_(std::move(context)),
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context) : llvm_context_(std::move(context)),
                                                                                 builder_(
                                                                                         std::make_unique<llvm::IRBuilder<>>(
                                                                                                 *llvm_context_)),
@@ -212,6 +211,8 @@ public:
     void visit(const AST::BooleanLiteralExpression &) override;
 
     void visit(const AST::NullLiteralExpression &) override;
+
+    void writeCode(std::filesystem::path &filename, const std::string &target_triple, int filetype);
 
     /* The following methods are used to manage the internal stack of the code generation engine. */
     /*
