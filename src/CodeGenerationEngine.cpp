@@ -28,6 +28,24 @@ void CodeGenerationEngine::visit(const AST::VariableExpression &expression) {
     }
 }
 
+void fixOperands(llvm::Value **lhs, llvm::Value **rhs, llvm::IRBuilder<> *builder) {
+    if ((*lhs)->getType()->isPointerTy()) {
+        *lhs = builder->CreatePtrToInt(*lhs, Type::getInt64Ty(builder->getContext()));
+    }
+
+    if ((*rhs)->getType()->isPointerTy()) {
+        *rhs = builder->CreatePtrToInt(*rhs, Type::getInt64Ty(builder->getContext()));
+    }
+
+    if ((*lhs)->getType()->getIntegerBitWidth() != (*rhs)->getType()->getIntegerBitWidth()) {
+        if ((*lhs)->getType()->getIntegerBitWidth() < (*rhs)->getType()->getIntegerBitWidth()) {
+            *lhs = builder->CreateSExt(*lhs, (*rhs)->getType());
+        } else {
+            *rhs = builder->CreateSExt(*rhs, (*lhs)->getType());
+        }
+    }
+}
+
 void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
     if (expression.op == EQ) {
         if (!expression.LHS->assignable()) {
@@ -67,9 +85,11 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
 
     switch (expression.op) {
         case ADD:
+            fixOperands(&LHS, &RHS, builder_.get());
             binop = Instruction::Add;
             goto binary_ops;
         case SUB:
+            fixOperands(&LHS, &RHS, builder_.get());
             binop = Instruction::Sub;
             goto binary_ops;
         case MUL:
@@ -245,9 +265,9 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
 
     auto x = F->arg_size();
 
-//    if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
-//        throw std::runtime_error("Incorrect number of arguments");
-//    }
+    if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
+        throw std::runtime_error("Incorrect number of arguments");
+    }
 
     std::vector<Value *> args(expression.args.size());
     int i = 0;
