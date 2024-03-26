@@ -30,7 +30,7 @@ void CodeGenerationEngine::visit(const AST::VariableExpression &expression) {
 
 void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
     if (expression.op == EQ) {
-        if (dynamic_cast<AST::AssignableExpression *>(expression.LHS.get()) == nullptr) {
+        if (!expression.LHS->assignable()) {
             throw std::runtime_error("LHS of assignment must be an assignable expression");
         }
 
@@ -591,6 +591,10 @@ void CodeGenerationEngine::writeCode(std::filesystem::path &filename, const std:
 
     module_->setDataLayout(TargetMachine->createDataLayout());
     module_->setTargetTriple(target_triple);
+
+    if (!exists(filename.parent_path())) {
+        std::filesystem::create_directories(filename.parent_path());
+    }
 
     std::error_code ec;
     raw_fd_ostream dest(filename.string(), ec, sys::fs::OF_None);

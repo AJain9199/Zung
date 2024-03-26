@@ -63,12 +63,17 @@ int main(int argc, char **argv) {
 
     std::filesystem::path path(argv[1]);
 
-    std::filesystem::path out_dir;
-    out_dir = path.parent_path() / build_dir;
-    out_dir /= path.filename();
 
     CodeGenerationEngine cge(std::move(context), getCmdOption(argv, argv + argc, "-cg"));
     p->accept(cge);
+
+    std::filesystem::path out_dir(build_dir);
+    if (out_dir.is_absolute()) {
+        out_dir /= path.filename();
+    } else {
+        out_dir = path.parent_path() / build_dir;
+        out_dir /= path.filename();
+    }
     cge.writeCode(out_dir, getCmdOption(argv, argv + argc, "-target"), filetype);
     delete p;
     auto codegen_post = std::chrono::high_resolution_clock::now();

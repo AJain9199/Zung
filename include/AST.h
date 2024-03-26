@@ -456,6 +456,10 @@ namespace AST {
 
         INJECT_ACCEPT();
 
+        bool assignable() override {
+            return op == Operator::MUL;
+        }
+
         TypeWrapper *type(llvm::LLVMContext *context) override {
             auto optype = operand->type(context);
 
