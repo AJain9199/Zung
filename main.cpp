@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     out_dir = path.parent_path() / build_dir;
     out_dir /= path.filename();
 
-    CodeGenerationEngine cge(std::move(context));
+    CodeGenerationEngine cge(std::move(context), getCmdOption(argv, argv + argc, "-cg"));
     p->accept(cge);
     cge.writeCode(out_dir, getCmdOption(argv, argv + argc, "-target"), filetype);
     delete p;

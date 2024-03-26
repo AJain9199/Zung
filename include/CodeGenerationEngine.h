@@ -133,9 +133,11 @@ private:
 
     LValueCodeGenerationEngine *rvalue_engine_;
 
+    bool no_red_zone = false;
+
 
 public:
-    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context) : llvm_context_(std::move(context)),
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, char *cg_options) : llvm_context_(std::move(context)),
                                                                                 builder_(
                                                                                         std::make_unique<llvm::IRBuilder<>>(
                                                                                                 *llvm_context_)),
@@ -144,6 +146,13 @@ public:
                                                                                 rvalue_engine_(
                                                                                         new LValueCodeGenerationEngine(
                                                                                                 this)) {
+        if (cg_options != nullptr) {
+            std::string cg_opts(cg_options);
+            if (cg_opts.find("no-red-zone") != std::string::npos) {
+                no_red_zone = true;
+            }
+        }
+
         fpm_ = std::make_unique<llvm::FunctionPassManager>();
         lam_ = std::make_unique<llvm::LoopAnalysisManager>();
         fam_ = std::make_unique<llvm::FunctionAnalysisManager>();

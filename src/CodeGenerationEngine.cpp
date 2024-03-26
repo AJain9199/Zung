@@ -143,6 +143,9 @@ void CodeGenerationEngine::visit(const AST::Function &function) {
     get_llvm_function(P.name);
     auto *F = STACK_GET(Function *);
 
+    if (no_red_zone) {
+        F->addAttributeAtIndex(0, Attribute::get(*llvm_context_, Attribute::NoRedZone));
+    }
 
     if (function.body == nullptr) {
         STACK_RET(F);
