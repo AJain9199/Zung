@@ -43,8 +43,14 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
             translation_unit->functions.push_back(std::move(f));
         } else if (is(EXTERN)) {
             auto f = parseExtern();
-            funcTab_->define(f->name, f.get());
-            translation_unit->prototypes.push_back(std::move(f));
+            if (std::holds_alternative<std::unique_ptr<AST::ExternFunction>>(f)) {
+                auto extern_func = std::get<std::unique_ptr<AST::ExternFunction>>(std::move(f));
+                funcTab_->define(extern_func->name, extern_func.get());
+                translation_unit->prototypes.push_back(std::move(extern_func));
+            } else {
+                translation_unit->global_declarations.push_back(
+                        std::get<std::unique_ptr<AST::Statement>>(std::move(f)));
+            }
         } else if (is(STRUCT)) {
             auto methods = std::move(parseStruct());
             translation_unit->functions.reserve(
@@ -65,8 +71,14 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
     return translation_unit;
 }
 
-std::unique_ptr<AST::ExternFunction> ParsingEngine::parseExtern() {
+std::variant<std::unique_ptr<AST::ExternFunction>, std::unique_ptr<AST::Statement>> ParsingEngine::parseExtern() {
     eat(EXTERN);
+
+    if (is(VAR)) {
+        auto var_decl = parseDeclarationStatement(true);
+        return var_decl;
+    }
+
     std::string id = eat_identifier();
     std::vector<TypeWrapper *> args = {};
     bool va = false;
@@ -638,6 +650,8 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement(bool gl
             entry = symTab_->define(type, name, Symbols::LOCAL);
         }
 
+        init_list[entry] = nullptr;
+
         if (is(EQ)) {
             lexer.advance();
             auto expr = parseExpression();
@@ -868,8 +882,8 @@ void ParsingEngine::handleImport() {
         pid_t pid = fork();
 
         if (pid == 0) { // child process that was just created
-            args_[0] = (char *)selfProcessName.c_str();
-            args_[1] = (char *)new_path->c_str();
+            args_[0] = (char *) selfProcessName.c_str();
+            args_[1] = (char *) new_path->c_str();
             execv(selfProcessName.c_str(), args_);
         }
         lexer.advance();

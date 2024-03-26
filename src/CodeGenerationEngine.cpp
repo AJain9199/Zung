@@ -4,7 +4,6 @@
 #include <llvm/Support/TargetSelect.h>
 #include <filesystem>
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -208,23 +207,30 @@ void CodeGenerationEngine::visit(const AST::ReturnStatement &statement) {
 
 void CodeGenerationEngine::visit(const AST::DeclarationStatement &statement) {
     for (auto &it: statement.init_list) {
-        it.second->accept(*this);
-        auto *val = STACK_GET(Value *);
+        Value *val = nullptr;
+        if (it.second != nullptr) {
+            it.second->accept(*this);
+            val = STACK_GET(Value *);
+        }
 
         if (it.first->scope == Symbols::GLOBAL) {
             auto *global = new GlobalVariable(*module_, it.first->type->type, false, GlobalValue::ExternalLinkage,
                                               nullptr, it.first->name());
-            if (!isa<Constant>(val)) {
-                throw std::runtime_error("Global variable must be initialized with a constant");
-            }
+            if (val != nullptr) {
+                if (!isa<Constant>(val)) {
+                    throw std::runtime_error("Global variable must be initialized with a constant");
+                }
 
-            global->setInitializer(dyn_cast<Constant>(val));
+                global->setInitializer(dyn_cast<Constant>(val));
+            }
             global_symbol_table_[it.first] = global;
         } else {
             Function *F = builder_->GetInsertBlock()->getParent();
             AllocaInst *alloca = create_entry_block_alloca(F, it.first->name(), it.first->type->type);
             symbol_table_[it.first] = alloca;
-            builder_->CreateStore(val, alloca);
+            if (val != nullptr) {
+                builder_->CreateStore(val, alloca);
+            }
         }
     }
 }
@@ -270,7 +276,7 @@ void CodeGenerationEngine::visit(const AST::CompoundStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
-    for (auto &i : unit.global_declarations) {
+    for (auto &i: unit.global_declarations) {
         i->accept(*this);
     }
 
@@ -475,7 +481,7 @@ RETURNS(llvm::Value *) CodeGenerationEngine::visit(const AST::AggregateLiteralEx
     bool is_const = true;
     std::vector<Value *> elements;
     elements.reserve(expression.elements.size());
-    for (auto &i : expression.elements) {
+    for (auto &i: expression.elements) {
         i->accept(*this);
         auto val = STACK_GET(llvm::Value *);
         elements.push_back(val);
@@ -498,7 +504,7 @@ RETURNS(llvm::Value *) CodeGenerationEngine::visit(const AST::AggregateLiteralEx
         } else {
             std::vector<Constant *> const_elements;
             const_elements.reserve(elements.size());
-            for (auto el : elements) {
+            for (auto el: elements) {
                 el->mutateType(expression.cast_type->type->getArrayElementType());
                 const_elements.push_back(dyn_cast<Constant>(el));
             }
