@@ -85,6 +85,8 @@ namespace AST {
      */
     class ASTVisitor {
     public:
+        virtual ~ASTVisitor() = default;
+
         virtual void visit(const AST::AbstractNode &) = 0;
 
         virtual void visit(const AST::Function &) = 0;

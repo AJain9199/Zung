@@ -299,6 +299,11 @@ TypeWrapper *ParsingEngine::parseType() {
         }
     }
 
+    if (is(EXP)) {
+        lexer.advance();
+        wrapper = TypeWrapper::getPointerTo(TypeWrapper::getPointerTo(wrapper));
+    }
+
     if (is('[')) {
         eat('[');
         while (!is(']')) {
@@ -756,6 +761,8 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
         (*type_table)[id]->fields[name] = {i++, type};
         members.push_back(type->type);
 
+        t->setBody(members, packed);
+
         if (!is(';')) {
             break;
         }
@@ -881,9 +888,9 @@ void ParsingEngine::handleImport() {
 
         pid_t pid = fork();
 
+        args_[0] = (char *) selfProcessName.c_str();
+        args_[1] = (char *) new_path->c_str();
         if (pid == 0) { // child process that was just created
-            args_[0] = (char *) selfProcessName.c_str();
-            args_[1] = (char *) new_path->c_str();
             execv(selfProcessName.c_str(), args_);
         }
         lexer.advance();

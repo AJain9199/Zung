@@ -1,6 +1,7 @@
 #include <ParsingEngine.h>
 #include <CodeGenerationEngine.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/TargetParser/Host.h>
 #include <iostream>
 #include <chrono>
 #include <filesystem>
@@ -27,7 +28,19 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    char *build_dir = getCmdOption(argv, argv + argc, "-o");
+    std::string build_dir = "./";
+    if (cmdOptionExists(argv, argv + argc, "-o")) {
+        build_dir = std::string(getCmdOption(argv, argv + argc, "-o"));
+    }
+
+    std::string target = llvm::sys::getDefaultTargetTriple();
+
+    if (cmdOptionExists(argv, argv + argc, "-target")) {
+
+        target = getCmdOption(argv, argv + argc, "-target");
+    } else {
+        std::cout << "Using default target: " << target << std::endl;
+    }
 
     char **args = (char **) malloc(sizeof(char *) * argc + 1);
     for (int i = 2; i < argc; i++) {
@@ -74,7 +87,7 @@ int main(int argc, char **argv) {
         out_dir = path.parent_path() / build_dir;
         out_dir /= path.filename();
     }
-    cge.writeCode(out_dir, getCmdOption(argv, argv + argc, "-target"), filetype);
+    cge.writeCode(out_dir, target, filetype);
     delete p;
     auto codegen_post = std::chrono::high_resolution_clock::now();
     std::cout << "Code generation took "

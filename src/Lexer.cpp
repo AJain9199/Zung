@@ -54,7 +54,8 @@ TokenType Lexer::getToken() {
             next();
             switch (current_char_) {
                 case '|':
-                    operator_ = (Operator) '>';
+                    operator_ = RSH;
+                    return OP;
                 case '=':
                     operator_ = GEQ;
                     return OP;
@@ -78,7 +79,8 @@ TokenType Lexer::getToken() {
             next();
             switch (current_char_) {
                 case '<':
-                    operator_ = (Operator) '|';
+                    operator_ = LSH;
+                    return OP;
                 case '|':
                     operator_ = LOGICAL_OR;
                     return OP;
@@ -93,7 +95,9 @@ TokenType Lexer::getToken() {
                 operator_ = (Operator) current_char_;
             } else {
                 rewind();
+                operator_ = static_cast<Operator>(0);
             }
+            goto m;
         case '-':
             prev = current_char_;
             next();
@@ -101,13 +105,25 @@ TokenType Lexer::getToken() {
                 operator_ = PTR;
                 return OP;
             } else {
+                operator_ = SUB;
                 rewind();
+                return OP;
             }
         case '%':
         case '^':
         case '!':
+            prev = current_char_;
+            next();
+            if (current_char_ == '=') {
+                operator_ = NEQ;
+                return OP;
+            } else {
+                rewind();
+                operator_ = (Operator) prev;
+            }
         case '+':
         case '&':
+m:
             operator_ = (Operator) (operator_ + current_char_);
             return OP;
 
