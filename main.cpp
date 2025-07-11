@@ -5,18 +5,8 @@
 #include <iostream>
 #include <chrono>
 #include <filesystem>
+#include <cmd.h>
 
-char *getCmdOption(char **begin, char **end, const std::string &option) {
-    char **itr = std::find(begin, end, option);
-    if (itr != end && ++itr != end) {
-        return *itr;
-    }
-    return nullptr;
-}
-
-bool cmdOptionExists(char **begin, char **end, const std::string &option) {
-    return std::find(begin, end, option) != end;
-}
 
 int main(int argc, char **argv) {
     auto parse_pre = std::chrono::high_resolution_clock::now();
@@ -28,19 +18,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::string build_dir = "./";
-    if (cmdOptionExists(argv, argv + argc, "-o")) {
-        build_dir = std::string(getCmdOption(argv, argv + argc, "-o"));
-    }
-
-    std::string target = llvm::sys::getDefaultTargetTriple();
-
-    if (cmdOptionExists(argv, argv + argc, "-target")) {
-
-        target = getCmdOption(argv, argv + argc, "-target");
-    } else {
-        std::cout << "Using default target: " << target << std::endl;
-    }
+    std::string build_dir = GET_CMD_DEFAULT("-o", "./");
+    std::string target = GET_CMD_DEFAULT("-target", llvm::sys::getDefaultTargetTriple());
 
     char **args = (char **) malloc(sizeof(char *) * argc + 1);
     for (int i = 2; i < argc; i++) {
@@ -77,7 +56,7 @@ int main(int argc, char **argv) {
     std::filesystem::path path(argv[1]);
 
 
-    CodeGenerationEngine cge(std::move(context), getCmdOption(argv, argv + argc, "-cg"));
+    CodeGenerationEngine cge(std::move(context), GET_CMD("-cg"));
     p->accept(cge);
 
     std::filesystem::path out_dir(build_dir);

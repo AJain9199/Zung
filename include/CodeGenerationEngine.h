@@ -148,15 +148,14 @@ class CodeGenerationEngine : public AST::ASTVisitor {
     bool no_red_zone = false;
 
 public:
-    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, char *cg_options) : llvm_context_(
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, const std::string &cg_options) : llvm_context_(
             std::move(context)),
         builder_(std::make_unique<llvm::IRBuilder<llvm::NoFolder> >(*llvm_context_)),
         module_(std::make_unique<llvm::Module>("main", *llvm_context_)), lhs(nullptr),
         rvalue_engine_(new LValueCodeGenerationEngine(this)) {
 
-        if (cg_options != nullptr) {
-            std::string cg_opts(cg_options);
-            if (cg_opts.find("no-red-zone") != std::string::npos) {
+        if (!cg_options.empty()) {
+            if (cg_options.find("no-red-zone") != std::string::npos) {
                 no_red_zone = true;
             }
         }
