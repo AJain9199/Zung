@@ -37,6 +37,15 @@ void fixOperands(Value **lhs, Value **rhs, IRBuilder<NoFolder> *builder) {
         *rhs = builder->CreatePtrToInt(*rhs, Type::getInt64Ty(builder->getContext()), "tmpint");
     }
 
+
+    if ((*lhs)->getType()->isFloatingPointTy() != (*rhs)->getType()->isFloatingPointTy()) {
+        if (!(*rhs)->getType()->isFloatingPointTy() && (*lhs)->getType()->isFloatingPointTy()) {
+            *rhs = builder->CreateSIToFP(*rhs, (*lhs)->getType(), "tmpfloat");
+        } else {
+            *lhs = builder->CreateSIToFP(*lhs, (*rhs)->getType(), "tmpfloat");
+        }
+    }
+
     if ((*lhs)->getType()->getIntegerBitWidth() != (*rhs)->getType()->getIntegerBitWidth()) {
         if ((*lhs)->getType()->getIntegerBitWidth() < (*rhs)->getType()->getIntegerBitWidth()) {
             *lhs = builder->CreateSExt(*lhs, (*rhs)->getType(), "tmpextend");
@@ -90,12 +99,22 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
     switch (expression.op) {
         case ADD:
             fixOperands(&LHS, &RHS, builder_.get());
+
+            if (LHS->getType()->isFloatingPointTy() || RHS->getType()->isFloatingPointTy()) {
+                return STACK_RET(builder_->CreateFAdd(LHS, RHS, "tmp"));
+            }
+
             return STACK_RET(builder_->CreateNSWAdd(LHS, RHS, "tmp"));
         case SUB:
             fixOperands(&LHS, &RHS, builder_.get());
             binop = Instruction::Sub;
             goto binary_ops;
         case MUL:
+            if (LHS->getType()->isFloatingPointTy() || RHS->getType()->isFloatingPointTy()) {
+                fixOperands(&LHS, &RHS, builder_.get());
+                return STACK_RET(builder_->CreateFMul(LHS, RHS, "tmp"));
+            }
+
             fixOperands(&LHS, &RHS, builder_.get());
             return STACK_RET(builder_->CreateNSWMul(LHS, RHS, "tmp"));
         case DIV:
@@ -146,6 +165,14 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             icmp = ICmpInst::ICMP_SLE;
             goto cmp_ops;
         case EXP:
+            if (LHS->getType()->isIntegerTy()) {
+                LHS = builder_->CreateSIToFP(LHS, Type::getDoubleTy(*llvm_context_), "tmpfloat");
+            }
+
+            if (RHS->getType()->isIntegerTy()) {
+                RHS = builder_->CreateSIToFP(RHS, Type::getDoubleTy(*llvm_context_), "tmpfloat");
+            }
+
             STACK_RET(builder_->CreateCall(module_->getFunction("pow"), {LHS, RHS}));
         case FLR:
             STACK_RET(builder_->CreateCall(module_->getFunction("flr"), {LHS, RHS}));
@@ -279,8 +306,12 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
             continue;
         }
 
+
+
         arg->accept(*this);
-        args[i++] = (STACK_GET(Value *));
+        auto val = STACK_GET(Value *);
+
+        args[i++] = val;
     }
 
     if (F->getReturnType()->isVoidTy()) {

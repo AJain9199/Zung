@@ -714,7 +714,7 @@ bool ParsingEngine::is(enum Operator op) {
     return lexer.get() == OP && lexer.operator_token() == op;
 }
 
-std::vector<std::unique_ptr<AST::Function> > ParsingEngine::parseStruct() {
+std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
     eat(STRUCT);
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);

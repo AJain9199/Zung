@@ -157,6 +157,13 @@ TokenType Lexer::getToken() {
                 }
             }
             return STR_LITERAL;
+        case '#':
+            while (current_char_ != EOF && current_char_ != '\n') {
+                next();
+            }
+
+            next();
+            return getToken();
         case EOF:
             return END;
     }

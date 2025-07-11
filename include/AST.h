@@ -637,8 +637,7 @@ namespace AST {
             }
 
             if (ltype->type->isIntegerTy()) {
-                if (op == ADD || op == SUB || op == MUL || op == FLR ||
-                    op == MOD) {
+                if (op == ADD || op == SUB || op == MUL || op == FLR || op == MOD || op == EXP) {
                     if (rtype->type->isIntegerTy()) {
                         return rtype->type->getIntegerBitWidth() > ltype->type->getIntegerBitWidth() ? rtype : ltype;
                     }
