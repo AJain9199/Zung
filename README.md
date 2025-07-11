@@ -6,7 +6,7 @@ Zung was developed as a learning effort to understand compiler design and implem
 
 ## Example Code
 
-```
+```python
 extern printf(i8 *str, ...);
 extern pow(double base, double exp): double;
 
