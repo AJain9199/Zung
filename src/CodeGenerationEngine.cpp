@@ -8,6 +8,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Verifier.h"
 
 #define STACK_RET(x) stack_return(x); return
 #define STACK_GET(x) (stack_get<x>())

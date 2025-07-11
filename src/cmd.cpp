@@ -10,7 +10,7 @@ std::string getCmdOption(char **begin, char **end, const std::string &option) {
 }
 
 std::string getCmdOption(char **begin, char **end, const std::string &option, const std::string &default_value) {
-    return getCmdOption(begin, end, option) ? getCmdOption(begin, end, option) : default_value;
+    return cmdOptionExists(begin, end, option) ? getCmdOption(begin, end, option) : default_value;
 }
 
 bool cmdOptionExists(char **begin, char **end, const std::string &option) {
