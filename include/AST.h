@@ -8,7 +8,6 @@
 #include <SymbolTable.h>
 #include <Lexer.h>
 #include <map>
-#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/DerivedTypes.h>
 #include "Types.h"
@@ -148,11 +147,11 @@ namespace AST {
      * Stores the translation unit, which is the source file as of writing.
      * The source file may contain multiple functions and prototypes (both extern and local) and structures.
      */
-    class TranslationUnit : public AbstractNode {
+    class TranslationUnit final : public AbstractNode {
     public:
-        std::vector<std::unique_ptr<Function>> functions;
-        std::vector<std::unique_ptr<ExternFunction>> prototypes;
-        std::vector<std::unique_ptr<Statement>> global_declarations;
+        std::vector<std::unique_ptr<Function> > functions;
+        std::vector<std::unique_ptr<ExternFunction> > prototypes;
+        std::vector<std::unique_ptr<Statement> > global_declarations;
 
         std::map<std::string, struct TypeInfo *> type_table;
         Symbols::SymbolTable *global_symbol_table;
@@ -165,7 +164,7 @@ namespace AST {
      * Stores the function, which is the main unit of execution in the source file.  It may or may not include the function body
      * (in the case of a prototype).
      */
-    class Function : public AbstractNode {
+    class Function final : public AbstractNode {
     public:
         Function(std::unique_ptr<FunctionPrototype> proto, std::unique_ptr<CompoundStatement> stmt);
 
@@ -209,7 +208,8 @@ namespace AST {
         std::vector<TypeWrapper *> typed_args;
 
         ExternFunction(std::string name, std::vector<TypeWrapper *> args, TypeWrapper *return_type, bool va)
-                : FunctionPrototype(std::move(name), {}, return_type, va), typed_args(std::move(args)) {}
+            : FunctionPrototype(std::move(name), {}, return_type, va), typed_args(std::move(args)) {
+        }
 
         ~ExternFunction() override {
             for (auto &arg: typed_args) {
@@ -238,11 +238,11 @@ namespace AST {
     /*
      * A collection of statements.
      */
-    class CompoundStatement : public Statement {
+    class CompoundStatement final : public Statement {
     public:
-        explicit CompoundStatement(std::vector<std::unique_ptr<Statement>> stmts);
+        explicit CompoundStatement(std::vector<std::unique_ptr<Statement> > stmts);
 
-        std::vector<std::unique_ptr<Statement>> statements;
+        std::vector<std::unique_ptr<Statement> > statements;
 
         INJECT_ACCEPT();
     };
@@ -250,9 +250,10 @@ namespace AST {
     /*
      * A return statement with an optional return value.
      */
-    class ReturnStatement : public Statement {
+    class ReturnStatement final : public Statement {
     public:
-        explicit ReturnStatement(std::unique_ptr<Expression> e) : expr(std::move(e)) {};
+        explicit ReturnStatement(std::unique_ptr<Expression> e) : expr(std::move(e)) {
+        };
 
         std::unique_ptr<Expression> expr;
 
@@ -262,11 +263,11 @@ namespace AST {
     /*
      * A declaration statement. Multiple variables may be declared, with different types and initial values.
      */
-    class DeclarationStatement : public Statement {
+    class DeclarationStatement final : public Statement {
     public:
-        explicit DeclarationStatement(std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression>> i_list);
+        explicit DeclarationStatement(std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression> > i_list);
 
-        std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression>> init_list;
+        std::map<Symbols::SymbolTableEntry *, std::unique_ptr<Expression> > init_list;
 
         INJECT_ACCEPT();
     };
@@ -274,7 +275,7 @@ namespace AST {
     /*
      * An expression statement. It may be any kind of expression, including function calls, assignments, etc.
      */
-    class ExpressionStatement : public Statement {
+    class ExpressionStatement final : public Statement {
     public:
         explicit ExpressionStatement(std::unique_ptr<Expression> e);
 
@@ -286,7 +287,7 @@ namespace AST {
     /*
      * Represents a for loop.
      */
-    class ForStatement : public Statement {
+    class ForStatement final : public Statement {
     public:
         std::unique_ptr<Statement> init;
         std::unique_ptr<Expression> condition;
@@ -295,17 +296,20 @@ namespace AST {
 
         ForStatement(std::unique_ptr<Statement> i, std::unique_ptr<Expression> cond, std::unique_ptr<Expression> up,
                      std::unique_ptr<CompoundStatement> b) : init(std::move(i)), condition(std::move(cond)),
-                                                             update(std::move(up)), body(std::move(b)) {};
+                                                             update(std::move(up)), body(std::move(b)) {
+        };
 
         INJECT_ACCEPT();
     };
 
-    class WhileStatement : public Statement {
+    class WhileStatement final : public Statement {
     public:
         std::unique_ptr<Expression> condition;
         std::unique_ptr<CompoundStatement> body;
 
-        WhileStatement(std::unique_ptr<Expression> cond, std::unique_ptr<CompoundStatement> b) : condition(std::move(cond)), body(std::move(b)) {};
+        WhileStatement(std::unique_ptr<Expression> cond,
+                       std::unique_ptr<CompoundStatement> b) : condition(std::move(cond)), body(std::move(b)) {
+        };
 
         INJECT_ACCEPT();
     };
@@ -313,14 +317,15 @@ namespace AST {
     /*
      * An if statement. It may or may not have an else clause.
      */
-    class IfStatement : public Statement {
+    class IfStatement final : public Statement {
     public:
         std::unique_ptr<Expression> condition;
         std::unique_ptr<Statement> body;
         std::unique_ptr<Statement> else_body;
 
         IfStatement(std::unique_ptr<Expression> cond, std::unique_ptr<Statement> b, std::unique_ptr<Statement> e)
-                : condition(std::move(cond)), body(std::move(b)), else_body(std::move(e)) {};
+            : condition(std::move(cond)), body(std::move(b)), else_body(std::move(e)) {
+        };
 
         INJECT_ACCEPT();
     };
@@ -351,12 +356,14 @@ namespace AST {
         }
     };
 
-    class FunctionNameExpression : public Expression {
+    class FunctionNameExpression final : public Expression {
     public:
-        explicit FunctionNameExpression(std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> f)
-                : func(std::move(f)) {};
+        explicit FunctionNameExpression(
+            std::variant<FunctionPrototype *, std::vector<FunctionPrototype *> > f)
+            : func(std::move(f)) {
+        };
 
-        std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> func;
+        std::variant<FunctionPrototype *, std::vector<FunctionPrototype *> > func;
 
         INJECT_ACCEPT();
 
@@ -365,14 +372,15 @@ namespace AST {
         };
     };
 
-    class MethodNameExpression : public Expression {
+    class MethodNameExpression final : public Expression {
     public:
         MethodNameExpression(std::unique_ptr<Expression> base,
-                             std::variant<FunctionPrototype *, std::vector<FunctionPrototype *>> name) : struct_(
-                std::move(base)), internal_name(std::move(name)) {};
+                             std::variant<FunctionPrototype *, std::vector<FunctionPrototype *> > name) : struct_(
+            std::move(base)), internal_name(std::move(name)) {
+        };
 
         std::unique_ptr<Expression> struct_;
-        std::variant<AST::FunctionPrototype *, std::vector<AST::FunctionPrototype *>> internal_name;
+        std::variant<FunctionPrototype *, std::vector<FunctionPrototype *> > internal_name;
 
         INJECT_ACCEPT();
 
@@ -384,9 +392,10 @@ namespace AST {
     /*
      * A floating point literal expression.
      */
-    class FloatLiteralExpression : public Expression {
+    class FloatLiteralExpression final : public Expression {
     public:
-        explicit FloatLiteralExpression(double v) : val(v) {};
+        explicit FloatLiteralExpression(double v) : val(v) {
+        };
 
         double val;
 
@@ -400,7 +409,7 @@ namespace AST {
     /*
      * A numeric constant expression.
      */
-    class IntegralLiteralExpression : public Expression {
+    class IntegralLiteralExpression final : public Expression {
     public:
         explicit IntegralLiteralExpression(int v);
 
@@ -416,7 +425,7 @@ namespace AST {
     /*
      * A variable expression. It may be a local variable, a global variable, or a function argument.
      */
-    class VariableExpression : public AssignableExpression {
+    class VariableExpression final : public AssignableExpression {
     public:
         explicit VariableExpression(Symbols::SymbolTableEntry *var);
 
@@ -432,11 +441,12 @@ namespace AST {
     /*
      * Field Access
      */
-    class FieldAccessExpression : public AssignableExpression {
+    class FieldAccessExpression final : public AssignableExpression {
     public:
-        FieldAccessExpression(std::unique_ptr<AST::Expression> s, FieldInfo f) : struct_(std::move(s)), field(f) {};
+        FieldAccessExpression(std::unique_ptr<Expression> s, const FieldInfo f) : struct_(std::move(s)), field(f) {
+        };
 
-        std::unique_ptr<AST::Expression> struct_;
+        std::unique_ptr<Expression> struct_;
         FieldInfo field;
 
         INJECT_ACCEPT();
@@ -449,7 +459,7 @@ namespace AST {
     /*
      * A unary expression with an operator and an operand.
      */
-    class UnaryExpression : public Expression {
+    class UnaryExpression final : public Expression {
     public:
         UnaryExpression(Operator o, std::unique_ptr<Expression> op);
 
@@ -465,16 +475,16 @@ namespace AST {
         TypeWrapper *type(llvm::LLVMContext *context) override {
             auto optype = operand->type(context);
 
-            if (op == Operator::AND) {
+            if (op == AND) {
                 return TypeWrapper::getPointerTo(optype);
             }
 
-            if (op == Operator::MUL) {
+            if (op == MUL) {
                 return optype->pointee_type;
             }
 
             if (optype->type->isIntegerTy()) {
-                if (op == Operator::SUB) {
+                if (op == SUB) {
                     return optype;
                 }
             } else if (optype->type->isFloatTy()) {
@@ -490,13 +500,11 @@ namespace AST {
 
     class FunctionCallExpression : public Expression {
     public:
-        FunctionCallExpression(std::unique_ptr<AST::Expression> f, std::vector<std::unique_ptr<Expression>> a,
+        FunctionCallExpression(std::unique_ptr<Expression> f, std::vector<std::unique_ptr<Expression> > a,
                                Symbols::FunctionTable *funcTab, llvm::LLVMContext *ctxt) : args(std::move(a)) {
-            if (dynamic_cast<AST::Expression *>(f.get()) == nullptr) {
-                throw std::runtime_error("FunctionCallExpression: callee is not an expression");
-            } else if (dynamic_cast<AST::MethodNameExpression *>(f.get()) != nullptr) {
-                auto *m = dynamic_cast<AST::MethodNameExpression *>(f.get());
-                if (std::holds_alternative<std::vector<AST::FunctionPrototype *>>(m->internal_name)) {
+            if (dynamic_cast<MethodNameExpression *>(f.get()) != nullptr) {
+                auto *m = dynamic_cast<MethodNameExpression *>(f.get());
+                if (std::holds_alternative<std::vector<FunctionPrototype *> >(m->internal_name)) {
                     std::vector<TypeWrapper *> types;
                     types.reserve(args.size() + 1);
                     types.push_back(TypeWrapper::getPointerTo(m->struct_->type(ctxt)));
@@ -504,7 +512,7 @@ namespace AST {
                         types.push_back(i->type(ctxt));
                     }
 
-                    auto target_args = std::get<std::vector<AST::FunctionPrototype *>>(m->internal_name);
+                    auto target_args = std::get<std::vector<FunctionPrototype *> >(m->internal_name);
                     for (auto &potential_func: target_args) {
                         if (potential_func->args.size() == types.size()) {
                             bool match = true;
@@ -515,22 +523,23 @@ namespace AST {
                                 }
                             }
                             if (match) {
-                                callee = std::make_unique<AST::FunctionNameExpression>(potential_func);
+                                callee = std::make_unique<FunctionNameExpression>(potential_func);
                                 break;
                             }
                         }
                     }
                 } else {
-                    callee = std::make_unique<AST::FunctionNameExpression>(m->internal_name);
+                    callee = std::make_unique<FunctionNameExpression>(m->internal_name);
                 }
-                std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(Operator::AND,
-                                                                                     std::move(m->struct_));
+                std::unique_ptr<Expression> base = std::make_unique<UnaryExpression>(AND, std::move(m->struct_));
                 args.insert(args.begin(), std::move(base));
                 is_method = true;
             } else {
-                auto *func = dynamic_cast<AST::FunctionNameExpression *>(f.get());
-                if (std::holds_alternative<std::vector<AST::FunctionPrototype *>>(func->func)) { // overloaded function
-                    auto target_args = std::get<std::vector<AST::FunctionPrototype *>>(func->func);
+                if (auto *func = dynamic_cast<FunctionNameExpression *>(f.get()); std::holds_alternative<std::vector<
+                    FunctionPrototype *> >(func->func)) {
+
+                    // overloaded function
+                    auto target_args = std::get<std::vector<FunctionPrototype *> >(func->func);
                     for (auto &i: target_args) {
                         if (i->args.size() == args.size()) {
                             bool match = true;
@@ -541,21 +550,21 @@ namespace AST {
                                 }
                             }
                             if (match) {
-                                callee = std::make_unique<AST::FunctionNameExpression>(i);
+                                callee = std::make_unique<FunctionNameExpression>(i);
                                 break;
                             }
                         }
                     }
                 } else {
-                    callee = std::move(std::unique_ptr<AST::FunctionNameExpression>(
-                            dynamic_cast<AST::FunctionNameExpression *>(f.release())));
+                    callee = std::move(std::unique_ptr<FunctionNameExpression>(
+                        dynamic_cast<FunctionNameExpression *>(f.release())));
                 }
             }
-            return_type = std::get<AST::FunctionPrototype *>(callee->func)->return_type;
+            return_type = std::get<FunctionPrototype *>(callee->func)->return_type;
         };
 
-        std::unique_ptr<AST::FunctionNameExpression> callee;
-        std::vector<std::unique_ptr<Expression>> args;
+        std::unique_ptr<FunctionNameExpression> callee;
+        std::vector<std::unique_ptr<Expression> > args;
 
         TypeWrapper *return_type;
 
@@ -571,12 +580,12 @@ namespace AST {
     /*
      * An array indexing expression. It can have multiple indices.
      */
-    class ArrayIndexingExpression : public AssignableExpression {
+    class ArrayIndexingExpression final : public AssignableExpression {
     public:
-        ArrayIndexingExpression(std::unique_ptr<Expression> arr, std::vector<std::unique_ptr<Expression>> idx);
+        ArrayIndexingExpression(std::unique_ptr<Expression> arr, std::vector<std::unique_ptr<Expression> > idx);
 
         std::unique_ptr<Expression> array;
-        std::vector<std::unique_ptr<Expression>> index;
+        std::vector<std::unique_ptr<Expression> > index;
 
         INJECT_ACCEPT();
 
@@ -600,7 +609,7 @@ namespace AST {
     /*
      * An expression with a left-hand side, an operator, and a right-hand side.
      */
-    class BinaryExpression : public Expression {
+    class BinaryExpression final : public Expression {
     public:
         BinaryExpression(std::unique_ptr<Expression> lhs, Operator o, std::unique_ptr<Expression> rhs,
                          llvm::LLVMContext *ctxt);
@@ -628,24 +637,25 @@ namespace AST {
             }
 
             if (ltype->type->isIntegerTy()) {
-                if (op == Operator::ADD || op == Operator::SUB || op == Operator::MUL || op == Operator::FLR ||
-                    op == Operator::MOD) {
+                if (op == ADD || op == SUB || op == MUL || op == FLR ||
+                    op == MOD) {
                     if (rtype->type->isIntegerTy()) {
                         return rtype->type->getIntegerBitWidth() > ltype->type->getIntegerBitWidth() ? rtype : ltype;
-                    } else if (rtype->type->isFloatTy()) {
+                    }
+
+                    if (rtype->type->isFloatTy()) {
                         return rtype;
                     }
-                } else if (op == Operator::DIV) {
-                    return new TypeWrapper(llvm::Type::getFloatTy(*context));
-                }
+                    } else if (op == DIV) {
+                        return new TypeWrapper(llvm::Type::getFloatTy(*context));
+                    }
             }
 
             if (ltype->type->isFloatTy() || rtype->type->isFloatTy()) {
                 return ltype;
             }
 
-            if (op == Operator::EQ || op == Operator::NEQ || op == Operator::LE || op == Operator::GE ||
-                op == Operator::LEQ || op == Operator::GEQ) {
+            if (op == EQ || op == NEQ || op == LE || op == GE || op == LEQ || op == GEQ) {
                 return new TypeWrapper(llvm::Type::getInt1Ty(*context));
             }
 
@@ -661,9 +671,10 @@ namespace AST {
     /*
      * A string literal expression. Represents a char*.
      */
-    class StringLiteralExpression : public Expression {
+    class StringLiteralExpression final : public Expression {
     public:
-        explicit StringLiteralExpression(std::string s) : val(std::move(s)) {};
+        explicit StringLiteralExpression(std::string s) : val(std::move(s)) {
+        };
 
         std::string val;
 
@@ -675,11 +686,12 @@ namespace AST {
         };
     };
 
-    class AggregateLiteralExpression : public Expression {
+    class AggregateLiteralExpression final : public Expression {
     public:
-        explicit AggregateLiteralExpression(std::vector<std::unique_ptr<Expression>> e) : elements(std::move(e)) {};
+        explicit AggregateLiteralExpression(std::vector<std::unique_ptr<Expression> > e) : elements(std::move(e)) {
+        };
 
-        std::vector<std::unique_ptr<Expression>> elements;
+        std::vector<std::unique_ptr<Expression> > elements;
         TypeWrapper *cast_type = nullptr;
 
         INJECT_ACCEPT();
@@ -689,9 +701,9 @@ namespace AST {
 
             if (cast_type->type->isArrayTy()) {
                 auto elem_type = cast_type->type->getArrayElementType();
-                for (auto &i : elements) {
-                    if (dynamic_cast<AggregateLiteralExpression *>(i.get())) {
-                        dynamic_cast<AggregateLiteralExpression *>(i.get())->set_type(new TypeWrapper(elem_type));
+                for (auto &i: elements) {
+                    if (auto agl = dynamic_cast<AggregateLiteralExpression *>(i.get()); agl != nullptr) {
+                        agl->set_type(new TypeWrapper(elem_type));
                     }
                 }
             }
@@ -715,9 +727,10 @@ namespace AST {
         };
     };
 
-    class BooleanLiteralExpression : public Expression {
+    class BooleanLiteralExpression final : public Expression {
     public:
-        explicit BooleanLiteralExpression(bool v) : val(v) {};
+        explicit BooleanLiteralExpression(const bool v) : val(v) {
+        };
 
         bool val;
 
@@ -728,7 +741,7 @@ namespace AST {
         };
     };
 
-    class NullLiteralExpression : public Expression {
+    class NullLiteralExpression final : public Expression {
     public:
         NullLiteralExpression() = default;
 

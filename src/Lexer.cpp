@@ -1,7 +1,8 @@
 #include <iostream>
 #include "Lexer.h"
 
-Lexer::Lexer(const std::string &filename) : filestream_(filename) {}
+Lexer::Lexer(const std::string &filename) : filestream_(filename) {
+}
 
 TokenType Lexer::getToken() {
     next();
@@ -123,7 +124,7 @@ TokenType Lexer::getToken() {
             }
         case '+':
         case '&':
-m:
+        m:
             operator_ = (Operator) (operator_ + current_char_);
             return OP;
 
@@ -158,7 +159,6 @@ m:
             return STR_LITERAL;
         case EOF:
             return END;
-
     }
 
     if (isalpha(current_char_) || current_char_ == '_') {
@@ -224,7 +224,7 @@ m:
         } else if (identifier_ == "import") {
             keyword_ = IMPORT;
             return KEYWORD;
-        }else {
+        } else {
             return IDENTIFIER;
         }
 

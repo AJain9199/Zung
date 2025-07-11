@@ -39,7 +39,7 @@ namespace Symbols {
 
     class SymbolTable {
     public:
-        SymbolTableEntry *define(TypeWrapper *type, std::string name, enum VarType varType);
+        SymbolTableEntry *define(TypeWrapper *type, const std::string& name, enum VarType varType);
 
         SymbolTableEntry *define(SymbolTableEntry *entry, enum VarType varType) {
             symbols_[entry->n] = entry;
@@ -51,7 +51,7 @@ namespace Symbols {
 
         ~SymbolTable() {
             for (auto &i: symbols_) {
-                delete i.second->type;
+                // delete i.second->type;
                 delete i.second;
             }
         }

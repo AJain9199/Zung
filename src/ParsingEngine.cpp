@@ -8,27 +8,27 @@
 #include <sys/types.h>
 
 std::map<enum Operator, int> ParsingEngine::precedence = {
-        {EQ,          1},
-        {LOGICAL_OR,  2},
-        {LOGICAL_AND, 3},
-        {OR,          4},
-        {XOR,         5},
-        {AND,         6},
-        {EQ_EQ,       7},
-        {NEQ,         7},
-        {GE,          8},
-        {GEQ,         8},
-        {LE,          8},
-        {LEQ,         8},
-        {LSH,         9},
-        {RSH,         9},
-        {ADD,         10},
-        {SUB,         10},
-        {MUL,         11},
-        {DIV,         11},
-        {MOD,         11},
-        {EXP,         12},
-        {FLR,         12}
+    {EQ, 1},
+    {LOGICAL_OR, 2},
+    {LOGICAL_AND, 3},
+    {OR, 4},
+    {XOR, 5},
+    {AND, 6},
+    {EQ_EQ, 7},
+    {NEQ, 7},
+    {GE, 8},
+    {GEQ, 8},
+    {LE, 8},
+    {LEQ, 8},
+    {LSH, 9},
+    {RSH, 9},
+    {ADD, 10},
+    {SUB, 10},
+    {MUL, 11},
+    {DIV, 11},
+    {MOD, 11},
+    {EXP, 12},
+    {FLR, 12}
 };
 
 AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
@@ -43,18 +43,18 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
             translation_unit->functions.push_back(std::move(f));
         } else if (is(EXTERN)) {
             auto f = parseExtern();
-            if (std::holds_alternative<std::unique_ptr<AST::ExternFunction>>(f)) {
-                auto extern_func = std::get<std::unique_ptr<AST::ExternFunction>>(std::move(f));
+            if (std::holds_alternative<std::unique_ptr<AST::ExternFunction> >(f)) {
+                auto extern_func = std::get<std::unique_ptr<AST::ExternFunction> >(std::move(f));
                 funcTab_->define(extern_func->name, extern_func.get());
                 translation_unit->prototypes.push_back(std::move(extern_func));
             } else {
                 translation_unit->global_declarations.push_back(
-                        std::get<std::unique_ptr<AST::Statement>>(std::move(f)));
+                    std::get<std::unique_ptr<AST::Statement> >(std::move(f)));
             }
         } else if (is(STRUCT)) {
             auto methods = std::move(parseStruct());
             translation_unit->functions.reserve(
-                    translation_unit->functions.size() + std::distance(methods.begin(), methods.end()));
+                translation_unit->functions.size() + std::distance(methods.begin(), methods.end()));
             translation_unit->functions.insert(translation_unit->functions.end(),
                                                std::make_move_iterator(methods.begin()),
                                                std::make_move_iterator(methods.end()));
@@ -71,7 +71,7 @@ AST::TranslationUnit *ParsingEngine::parseTranslationUnit() {
     return translation_unit;
 }
 
-std::variant<std::unique_ptr<AST::ExternFunction>, std::unique_ptr<AST::Statement>> ParsingEngine::parseExtern() {
+std::variant<std::unique_ptr<AST::ExternFunction>, std::unique_ptr<AST::Statement> > ParsingEngine::parseExtern() {
     eat(EXTERN);
 
     if (is(VAR)) {
@@ -146,15 +146,15 @@ ParsingEngine::parseFunction(const std::vector<Symbols::SymbolTableEntry *> &beg
     if (is(';')) {
         eat(';');
         return std::make_unique<AST::Function>(
-                std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
-                nullptr);
+            std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
+            nullptr);
     }
 
     auto body = parseCompoundStatement();
 
     auto func = std::make_unique<AST::Function>(
-            std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
-            std::move(body));
+        std::make_unique<AST::FunctionPrototype>(id, args, return_type, var_args),
+        std::move(body));
 
 
     func->symbol_table = sym;
@@ -206,7 +206,7 @@ std::vector<Symbols::SymbolTableEntry *> ParsingEngine::parseArgList(bool *is_va
  * { (statement)* }
  * */
 std::unique_ptr<AST::CompoundStatement> ParsingEngine::parseCompoundStatement() {
-    std::vector<std::unique_ptr<AST::Statement>> statements;
+    std::vector<std::unique_ptr<AST::Statement> > statements;
     eat('{');
 
     while (!(is('}') && lexer.get() == PUNCTUATION)) {
@@ -281,7 +281,8 @@ TypeWrapper *ParsingEngine::parseType() {
                 basic_type = llvm::Type::getInt1Ty(*llvm_context_);
                 break;
         }
-    } else { // token is an identifier
+    } else {
+        // token is an identifier
         std::string id = eat_identifier();
         if (std::regex_match(id, type_regex)) {
             int width = std::stoi(id.substr(1));
@@ -350,8 +351,8 @@ std::unique_ptr<AST::Expression> ParsingEngine::parseIdentifierExpression() {
             auto typeinfo = (*type_table)[currentStruct->getStructName().str()]->fields;
             if (typeinfo.find(name) != typeinfo.end()) {
                 return std::make_unique<AST::FieldAccessExpression>(std::make_unique<AST::VariableExpression>(
-                                                                            symTab_->find(
-                                                                                    "this")),
+                                                                        symTab_->find(
+                                                                            "this")),
                                                                     typeinfo[name]);
             }
         }
@@ -405,7 +406,7 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
             switch (lexer.character()) {
                 case '(': {
                     eat('(');
-                    std::vector<std::unique_ptr<AST::Expression>> args;
+                    std::vector<std::unique_ptr<AST::Expression> > args;
                     while (!(is(')') && lexer.get() == PUNCTUATION)) {
                         args.push_back(parseExpression());
                         if (is(',')) {
@@ -416,9 +417,9 @@ std::unique_ptr<AST::Expression> ParsingEngine::parsePostfix(std::unique_ptr<AST
                     LHS = std::make_unique<AST::FunctionCallExpression>(std::move(LHS), std::move(args), funcTab_,
                                                                         llvm_context_.get());
                 }
-                    break;
+                break;
                 case '[': {
-                    std::vector<std::unique_ptr<AST::Expression>> indices;
+                    std::vector<std::unique_ptr<AST::Expression> > indices;
                     eat('[');
 
                     while (!is(']')) {
@@ -557,7 +558,7 @@ ParsingEngine::parseBinaryExpression(unsigned int min_precedence, std::unique_pt
                     std::cerr << "Unsupported operator" << std::endl;
                     return nullptr;
             }
-            std::vector<std::unique_ptr<AST::Expression>> args(1);
+            std::vector<std::unique_ptr<AST::Expression> > args(1);
             args[0] = std::move(RHS);
             auto m = std::make_unique<AST::MethodNameExpression>(std::move(LHS), ltype->methods[method_name]);
             LHS = std::make_unique<AST::FunctionCallExpression>(std::move(m), std::move(args), funcTab_,
@@ -643,7 +644,7 @@ std::unique_ptr<AST::Statement> ParsingEngine::parseIfStatement() {
 std::unique_ptr<AST::Statement> ParsingEngine::parseDeclarationStatement(bool global) {
     eat(VAR);
 
-    std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression>> init_list;
+    std::map<Symbols::SymbolTableEntry *, std::unique_ptr<AST::Expression> > init_list;
     TypeWrapper *type = parseType();
 
     while (true) {
@@ -713,14 +714,14 @@ bool ParsingEngine::is(enum Operator op) {
     return lexer.get() == OP && lexer.operator_token() == op;
 }
 
-std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
+std::vector<std::unique_ptr<AST::Function> > ParsingEngine::parseStruct() {
     eat(STRUCT);
     std::string id = eat_identifier();
     auto *t = llvm::StructType::create(*llvm_context_, id);
 
     currentStruct = t;
 
-    (*type_table)[id] = new (struct TypeInfo) {t, {}};
+    (*type_table)[id] = new (struct TypeInfo){t, {}};
     bool packed = false;
 
     if (is(PACKED)) {
@@ -730,7 +731,7 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
 
     eat('{');
     std::vector<llvm::Type *> members;
-    std::vector<std::unique_ptr<AST::Function>> methods;
+    std::vector<std::unique_ptr<AST::Function> > methods;
     int i = 0;
     while (!is('}')) {
         if (is(FN)) {
@@ -741,14 +742,16 @@ std::vector<std::unique_ptr<AST::Function>> ParsingEngine::parseStruct() {
             std::string original_name;
 
             auto f = parseFunction(
-                    {this_arg}, &original_name);
+                {this_arg}, &original_name);
 
             std::string func_name = f->prototype->name;
             // unmangled required here
             if ((*type_table)[id]->methods.find(original_name) != (*type_table)[id]->methods.end()) {
                 (*type_table)[id]->methods[original_name] = std::vector<AST::FunctionPrototype *>(
-                        {std::get<AST::FunctionPrototype *>((*type_table)[id]->methods[original_name]),
-                         f->prototype.get()});
+                    {
+                        std::get<AST::FunctionPrototype *>((*type_table)[id]->methods[original_name]),
+                        f->prototype.get()
+                    });
             } else {
                 (*type_table)[id]->methods[original_name] = f->prototype.get();
             }
@@ -846,7 +849,7 @@ std::string ParsingEngine::mangleFunctionName(AST::FunctionPrototype *proto) {
 
 std::unique_ptr<AST::Expression> ParsingEngine::parseAggregateLiteralExpression() {
     eat('{');
-    std::vector<std::unique_ptr<AST::Expression>> exprs;
+    std::vector<std::unique_ptr<AST::Expression> > exprs;
     while (!is('}')) {
         exprs.push_back(parseExpression());
         if (!is(',')) {
@@ -890,7 +893,8 @@ void ParsingEngine::handleImport() {
 
         args_[0] = (char *) selfProcessName.c_str();
         args_[1] = (char *) new_path->c_str();
-        if (pid == 0) { // child process that was just created
+        if (pid == 0) {
+            // child process that was just created
             execv(selfProcessName.c_str(), args_);
         }
         lexer.advance();

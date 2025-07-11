@@ -1,12 +1,7 @@
 #ifndef ZUNG_CODEGENERATIONENGINE_H
 #define ZUNG_CODEGENERATIONENGINE_H
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -14,16 +9,12 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/StandardInstrumentations.h>
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include <AST.h>
 #include <stack>
-#include <any>
 #include <utility>
 #include <filesystem>
 
@@ -46,10 +37,9 @@ class CodeGenerationEngine;
  * visitor does not have return types for the visitor subroutines.
  */
 class CodeGenerationEngine : public AST::ASTVisitor {
-private:
     std::stack<void *> stack_; /* TODO: Use a variant instead later in development */
     std::unique_ptr<llvm::LLVMContext> llvm_context_;
-    std::unique_ptr<llvm::IRBuilder<llvm::NoFolder>> builder_;
+    std::unique_ptr<llvm::IRBuilder<llvm::NoFolder> > builder_;
     std::unique_ptr<llvm::Module> module_;
 
     /* Optimization passes */
@@ -79,74 +69,91 @@ private:
     class LValueCodeGenerationEngine : public AST::ASTVisitor {
     private:
         CodeGenerationEngine *engine_;
-    public:
 
-        explicit LValueCodeGenerationEngine(CodeGenerationEngine *engine) : engine_(engine) {}
+    public:
+        explicit LValueCodeGenerationEngine(CodeGenerationEngine *engine) : engine_(engine) {
+        }
 
         void visit(const AST::VariableExpression &) override;
 
         void visit(const AST::FieldAccessExpression &) override;
 
-        void visit(const AST::AbstractNode &) override {};
+        void visit(const AST::AbstractNode &) override {
+        };
 
-        void visit(const AST::TranslationUnit &) override {};
+        void visit(const AST::TranslationUnit &) override {
+        };
 
-        void visit(const AST::Function &) override {};
+        void visit(const AST::Function &) override {
+        };
 
-        void visit(const AST::FunctionPrototype &) override {};
+        void visit(const AST::FunctionPrototype &) override {
+        };
 
-        void visit(const AST::ExternFunction &) override {};
+        void visit(const AST::ExternFunction &) override {
+        };
 
-        void visit(const AST::CompoundStatement &) override {};
+        void visit(const AST::CompoundStatement &) override {
+        };
 
-        void visit(const AST::ReturnStatement &) override {};
+        void visit(const AST::ReturnStatement &) override {
+        };
 
-        void visit(const AST::ForStatement &) override {};
+        void visit(const AST::ForStatement &) override {
+        };
 
-        void visit(const AST::DeclarationStatement &) override {};
+        void visit(const AST::DeclarationStatement &) override {
+        };
 
-        void visit(const AST::ExpressionStatement &) override {};
+        void visit(const AST::ExpressionStatement &) override {
+        };
 
-        void visit(const AST::IfStatement &) override {};
+        void visit(const AST::IfStatement &) override {
+        };
 
         void visit(const AST::ArrayIndexingExpression &) override;
 
-        void visit(const AST::FunctionCallExpression &) override {};
+        void visit(const AST::FunctionCallExpression &) override {
+        };
 
-        void visit(const AST::BinaryExpression &) override {};
+        void visit(const AST::BinaryExpression &) override {
+        };
 
         void visit(const AST::UnaryExpression &) override;
 
-        void visit(const AST::IntegralLiteralExpression &) override {};
+        void visit(const AST::IntegralLiteralExpression &) override {
+        };
 
-        void visit(const AST::StringLiteralExpression &) override {};
+        void visit(const AST::StringLiteralExpression &) override {
+        };
 
-        void visit(const AST::FloatLiteralExpression &) override {};
+        void visit(const AST::FloatLiteralExpression &) override {
+        };
 
-        void visit(const AST::AggregateLiteralExpression &) override {};
+        void visit(const AST::AggregateLiteralExpression &) override {
+        };
 
-        void visit(const AST::WhileStatement &) override {};
+        void visit(const AST::WhileStatement &) override {
+        };
 
-        void visit(const AST::BooleanLiteralExpression &) override {};
+        void visit(const AST::BooleanLiteralExpression &) override {
+        };
 
-        void visit(const AST::NullLiteralExpression &) override {};
+        void visit(const AST::NullLiteralExpression &) override {
+        };
     };
 
     LValueCodeGenerationEngine *rvalue_engine_;
 
     bool no_red_zone = false;
 
-
 public:
-    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, char *cg_options) : llvm_context_(std::move(context)),
-                                                                                builder_(
-                                                                                        std::make_unique<llvm::IRBuilder<llvm::NoFolder>>(
-                                                                                                *llvm_context_)),
-                                                                                module_(std::make_unique<llvm::Module>(
-                                                                                        "main", *llvm_context_)),
-                                                                                rvalue_engine_(
-                                                                                        new LValueCodeGenerationEngine(
-                                                                                                this)) {
+    explicit CodeGenerationEngine(std::unique_ptr<llvm::LLVMContext> context, char *cg_options) : llvm_context_(
+            std::move(context)),
+        builder_(std::make_unique<llvm::IRBuilder<llvm::NoFolder> >(*llvm_context_)),
+        module_(std::make_unique<llvm::Module>("main", *llvm_context_)), lhs(nullptr),
+        rvalue_engine_(new LValueCodeGenerationEngine(this)) {
+
         if (cg_options != nullptr) {
             std::string cg_opts(cg_options);
             if (cg_opts.find("no-red-zone") != std::string::npos) {
@@ -174,7 +181,8 @@ public:
         mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
     }
 
-    void visit(const AST::AbstractNode &) override {};
+    void visit(const AST::AbstractNode &) override {
+    };
 
     void visit(const AST::TranslationUnit &) override;
 
@@ -222,14 +230,14 @@ public:
 
     void visit(const AST::NullLiteralExpression &) override;
 
-    void writeCode(std::filesystem::path &filename, const std::string &target_triple, int filetype);
+    void writeCode(std::filesystem::path &filename, const std::string &target_triple, int filetype) const;
 
     /* The following methods are used to manage the internal stack of the code generation engine. */
     /*
      * "returns" a value to the stack, by pushing onto it.
      * @param val: the value to be pushed onto the stack
      */
-    inline void stack_return(void *val) {
+    void stack_return(void *val) {
         stack_.push(val);
     }
 
@@ -240,8 +248,8 @@ public:
      * @return: the top value from the stack
      */
     template<typename T>
-    inline T stack_get() {
-        auto val = (T) (stack_.top());
+    T stack_get() {
+        auto val = static_cast<T>(stack_.top());
         stack_.pop();
         return val;
     }

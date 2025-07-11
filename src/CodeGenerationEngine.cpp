@@ -22,13 +22,12 @@ void CodeGenerationEngine::visit(const AST::VariableExpression &expression) {
     if (expression.variable->scope == Symbols::GLOBAL) {
         auto var = global_symbol_table_[expression.variable];
         STACK_RET(builder_->CreateLoad(var->getValueType(), var, expression.variable->name()));
-    } else {
-        auto var = symbol_table_[expression.variable];
-        STACK_RET(builder_->CreateLoad(var->getAllocatedType(), var, expression.variable->name()));
     }
+    auto var = symbol_table_[expression.variable];
+    STACK_RET(builder_->CreateLoad(var->getAllocatedType(), var, expression.variable->name()));
 }
 
-void fixOperands(llvm::Value **lhs, llvm::Value **rhs, llvm::IRBuilder<llvm::NoFolder> *builder) {
+void fixOperands(Value **lhs, Value **rhs, IRBuilder<NoFolder> *builder) {
     if ((*lhs)->getType()->isPointerTy()) {
         *lhs = builder->CreatePtrToInt(*lhs, Type::getInt64Ty(builder->getContext()), "tmpint");
     }
@@ -47,10 +46,6 @@ void fixOperands(llvm::Value **lhs, llvm::Value **rhs, llvm::IRBuilder<llvm::NoF
 }
 
 void create_eq(Value *lhs, Value *rhs, IRBuilder<NoFolder> *builder_) {
-    // if (rhs->getType()->isIntegerTy() && rhs->getType()->getIntegerBitWidth() > lhs->getType()->getIntegerBitWidth()) {
-    //     rhs->mutateType(lhs->getType());
-    // }
-
     builder_->CreateStore(rhs, lhs);
 }
 
@@ -76,10 +71,8 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
         }
 
 
-
         expression.LHS->accept(*rvalue_engine_);
         auto *LHS = STACK_GET(Value *);
-        // std::cout << RHS->getType()->isIntegerTy() << " " << RHS->getType()->getIntegerBitWidth() << " " << LHS->getType()->getIntegerBitWidth();
         create_eq(LHS, RHS, builder_.get());
         STACK_RET(RHS);
     }
@@ -93,9 +86,6 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
     Instruction::BinaryOps binop;
     ICmpInst::Predicate icmp;
 
-    LHS->getType()->print(llvm::errs(), true);
-    RHS->getType()->print(llvm::errs(), true);
-
     switch (expression.op) {
         case ADD:
             fixOperands(&LHS, &RHS, builder_.get());
@@ -108,11 +98,6 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             fixOperands(&LHS, &RHS, builder_.get());
             return STACK_RET(builder_->CreateNSWMul(LHS, RHS, "tmp"));
         case DIV:
-//            if (LHS->getType()->isPointerTy() || RHS->getType()->isPointerTy()) {
-//                binop = Instruction::UDiv;
-//            } else {
-//                binop = Instruction::SDiv;
-//            }
             binop = Instruction::SDiv;
             goto binary_ops;
         case MOD:
@@ -131,9 +116,9 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
         case OR:
             binop = Instruction::Or;
             goto binary_ops;
-//        case XOR:
-//            binop = Instruction::Xor;
-//            goto binary_ops;
+        //        case XOR:
+        //            binop = Instruction::Xor;
+        //            goto binary_ops;
         case LOGICAL_AND:
             binop = Instruction::And;
             goto rel_ops;
@@ -160,18 +145,18 @@ void CodeGenerationEngine::visit(const AST::BinaryExpression &expression) {
             icmp = ICmpInst::ICMP_SLE;
             goto cmp_ops;
         case EXP:
-        STACK_RET(builder_->CreateCall(module_->getFunction("pow"), {LHS, RHS}));
+            STACK_RET(builder_->CreateCall(module_->getFunction("pow"), {LHS, RHS}));
         case FLR:
-        STACK_RET(builder_->CreateCall(module_->getFunction("flr"), {LHS, RHS}));
+            STACK_RET(builder_->CreateCall(module_->getFunction("flr"), {LHS, RHS}));
         default:
             throw std::runtime_error("Not implemented yet");
     }
-    binary_ops:
-STACK_RET(builder_->CreateBinOp(binop, LHS, RHS, "tmp"));
-    rel_ops:
-STACK_RET(builder_->CreateLogicalOp(binop, LHS, RHS, "tmp"));
-    cmp_ops:
-STACK_RET(builder_->CreateCmp(icmp, LHS, RHS, "tmp"));
+binary_ops:
+    STACK_RET(builder_->CreateBinOp(binop, LHS, RHS, "tmp"));
+rel_ops:
+    STACK_RET(builder_->CreateLogicalOp(binop, LHS, RHS, "tmp"));
+cmp_ops:
+    STACK_RET(builder_->CreateCmp(icmp, LHS, RHS, "tmp"));
 }
 
 void CodeGenerationEngine::visit(const AST::Function &function) {
@@ -205,8 +190,6 @@ void CodeGenerationEngine::visit(const AST::Function &function) {
 
     function.body->accept(*this);
     verifyFunction(*F);
-
-//    fpm_->run(*F, *fam_);
 
     delete function.symbol_table;
 
@@ -282,8 +265,6 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
     get_llvm_function(std::get<AST::FunctionPrototype *>(expression.callee->func)->name);
     auto F = STACK_GET(Function *);
 
-    auto x = F->arg_size();
-
     if (F->arg_size() != expression.args.size() && !F->isVarArg()) {
         throw std::runtime_error("Incorrect number of arguments");
     }
@@ -300,11 +281,11 @@ void CodeGenerationEngine::visit(const AST::FunctionCallExpression &expression) 
         arg->accept(*this);
         args[i++] = (STACK_GET(Value *));
     }
+
     if (F->getReturnType()->isVoidTy()) {
         STACK_RET(builder_->CreateCall(F, args));
-    } else {
-        STACK_RET(builder_->CreateCall(F, args, "calltmp"));
     }
+    STACK_RET(builder_->CreateCall(F, args, "calltmp"));
 }
 
 
@@ -328,29 +309,6 @@ void CodeGenerationEngine::visit(const AST::TranslationUnit &unit) {
         i->accept(*this);
         STACK_GET(Function *);
     }
-
-//    fpm_ = std::make_unique<llvm::FunctionPassManager>();
-//    lam_ = std::make_unique<llvm::LoopAnalysisManager>();
-//    fam_ = std::make_unique<llvm::FunctionAnalysisManager>();
-//    cgam_ = std::make_unique<llvm::CGSCCAnalysisManager>();
-//    mam_ = std::make_unique<llvm::ModuleAnalysisManager>();
-//    pic_ = std::make_unique<llvm::PassInstrumentationCallbacks>();
-//    si_ = std::make_unique<llvm::StandardInstrumentations>(*llvm_context_, false);
-//
-//    fpm_->addPass(llvm::InstCombinePass());
-//    fpm_->addPass(llvm::ReassociatePass());
-//    fpm_->addPass(llvm::GVNPass());
-//    fpm_->addPass(llvm::SimplifyCFGPass());
-//
-//    pb_.registerModuleAnalyses(*mam_);
-//    pb_.registerFunctionAnalyses(*fam_);
-//    pb_.registerCGSCCAnalyses(*cgam_);
-//    pb_.registerLoopAnalyses(*lam_);
-//    pb_.crossRegisterProxies(*lam_, *fam_, *cgam_, *mam_);
-//
-//    mpm_ = pb_.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
-//
-//    mpm_.run(*module_, *mam_);
 }
 
 void CodeGenerationEngine::get_llvm_function(const std::string &name) {
@@ -367,9 +325,9 @@ void CodeGenerationEngine::get_llvm_function(const std::string &name) {
     STACK_RET(nullptr);
 }
 
-llvm::AllocaInst *
+AllocaInst *
 CodeGenerationEngine::create_entry_block_alloca(llvm::Function *func, const std::string &var_name, llvm::Type *type) {
-    return IRBuilder<>(&func->getEntryBlock(), func->getEntryBlock().begin()).CreateAlloca(type, nullptr, var_name);
+    return IRBuilder(&func->getEntryBlock(), func->getEntryBlock().begin()).CreateAlloca(type, nullptr, var_name);
 }
 
 void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
@@ -378,9 +336,11 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
         auto *val = STACK_GET(Value *);
 
         if (!val->getType()->isPointerTy()) {
-            val = builder_->CreateIntToPtr(val,
-                                           PointerType::get(expression.operand->type(llvm_context_.get())->type, 0),
-                                           "ptrtmp");
+            val = builder_->CreateIntToPtr(
+                val,
+                PointerType::get(expression.operand->type(llvm_context_.get())->type, 0),
+                "ptrtmp"
+            );
         }
 
         STACK_RET(builder_->CreateLoad(expression.operand->type(llvm_context_.get())->pointee_type->type, val));
@@ -389,10 +349,10 @@ void CodeGenerationEngine::visit(const AST::UnaryExpression &expression) {
     expression.operand->accept(*this);
     auto *val = STACK_GET(Value *);
 
-    val->getType()->print(llvm::errs(), true);
+    // val->getType()->print(llvm::errs(), true);
     switch (expression.op) {
         case SUB:
-        STACK_RET(builder_->CreateNeg(val));
+            STACK_RET(builder_->CreateNeg(val));
         case AND: {
             auto v = dynamic_cast<AST::VariableExpression *>(expression.operand.get());
             if (v != nullptr) {
@@ -426,7 +386,7 @@ void CodeGenerationEngine::visit(const AST::ExternFunction &function) {
 }
 
 void CodeGenerationEngine::visit(const AST::StringLiteralExpression &expression) {
-    STACK_RET(builder_->CreateGlobalStringPtr(expression.val));
+    STACK_RET(builder_->CreateGlobalString(expression.val));
 }
 
 void CodeGenerationEngine::visit(const AST::FloatLiteralExpression &expression) {
@@ -470,7 +430,8 @@ void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
     statement.condition->accept(*this);
     auto cond_val = STACK_GET(Value *);
     if (cond_val->getType()->getIntegerBitWidth() != 1) {
-        cond_val = builder_->CreateICmpNE(cond_val, ConstantInt::get(Type::getIntNTy(*llvm_context_, cond_val->getType()->getIntegerBitWidth()), 0));
+        cond_val = builder_->CreateICmpNE(
+            cond_val, ConstantInt::get(Type::getIntNTy(*llvm_context_, cond_val->getType()->getIntegerBitWidth()), 0));
     }
 
     if (statement.else_body != nullptr) {
@@ -495,24 +456,23 @@ void CodeGenerationEngine::visit(const AST::IfStatement &statement) {
 }
 
 void CodeGenerationEngine::visit(const AST::FieldAccessExpression &expression) {
-    llvm::Value *base_struct;
     if (expression.struct_->assignable()) {
         expression.struct_->accept(*rvalue_engine_);
-        base_struct = STACK_GET(llvm::Value *);
-        base_struct->getType()->print(llvm::errs(), true);
-        auto get_field = builder_->CreateStructGEP(expression.struct_->type(llvm_context_.get())->type, base_struct,
-                                                   expression.field.idx);
-        STACK_RET(builder_->CreateLoad(
-                expression.struct_->type(llvm_context_.get())->type->getStructElementType(expression.field.idx),
-                get_field));
-    } else {
-        expression.struct_->accept(*rvalue_engine_);
-        auto *struct_ptr = STACK_GET(llvm::Value *);
-        auto type = expression.struct_->type(llvm_context_.get())->type;
+        auto base_struct = STACK_GET(llvm::Value *);
 
-        auto get_field = builder_->CreateStructGEP(type, struct_ptr, expression.field.idx);
-        STACK_RET(builder_->CreateLoad(type->getStructElementType(expression.field.idx), get_field));
+        Value *get_field = builder_->CreateStructGEP(expression.struct_->type(llvm_context_.get())->type, base_struct,
+                                                     expression.field.idx);
+        STACK_RET(builder_->CreateLoad(
+            expression.struct_->type(llvm_context_.get())->type->getStructElementType(expression.field.idx),
+            get_field));
     }
+
+    expression.struct_->accept(*rvalue_engine_);
+    auto *struct_ptr = STACK_GET(llvm::Value *);
+    auto type = expression.struct_->type(llvm_context_.get())->type;
+
+    auto get_field = builder_->CreateStructGEP(type, struct_ptr, expression.field.idx);
+    STACK_RET(builder_->CreateLoad(type->getStructElementType(expression.field.idx), get_field));
 }
 
 void CodeGenerationEngine::visit(const AST::ArrayIndexingExpression &expression) {
@@ -563,30 +523,27 @@ RETURNS(llvm::Value *) CodeGenerationEngine::visit(const AST::AggregateLiteralEx
             const_elements.reserve(elements.size());
             for (int i = 0; i < elements.size(); i++) {
                 auto el = dyn_cast<Constant>(elements[i]);
-                expression.cast_type->type->getStructElementType(i)->print(llvm::outs());
                 el->mutateType(expression.cast_type->type->getStructElementType(i));
                 const_elements.push_back(el);
             }
             STACK_RET(ConstantStruct::get(dyn_cast<StructType>(expression.cast_type->type), const_elements));
-        } else {
-            std::vector<Constant *> const_elements;
-            const_elements.reserve(elements.size());
-            for (auto el: elements) {
-                el->mutateType(expression.cast_type->type->getArrayElementType());
-                const_elements.push_back(dyn_cast<Constant>(el));
-            }
-            STACK_RET(ConstantArray::get(dyn_cast<ArrayType>(expression.cast_type->type), const_elements));
         }
-    } else {
-        if (expression.cast_type->type->isStructTy()) {
-            lhs->accept(*rvalue_engine_);
-            auto *lhs_val = STACK_GET(Value *);
-            for (int i = 0; i < elements.size(); i++) {
-                auto field = builder_->CreateStructGEP(expression.cast_type->type, lhs_val, i);
-                builder_->CreateStore(elements[i], field);
-            }
-            STACK_RET(nullptr);
+        std::vector<Constant *> const_elements;
+        const_elements.reserve(elements.size());
+        for (auto el: elements) {
+            el->mutateType(expression.cast_type->type->getArrayElementType());
+            const_elements.push_back(dyn_cast<Constant>(el));
         }
+        STACK_RET(ConstantArray::get(dyn_cast<ArrayType>(expression.cast_type->type), const_elements));
+    }
+    if (expression.cast_type->type->isStructTy()) {
+        lhs->accept(*rvalue_engine_);
+        auto *lhs_val = STACK_GET(Value *);
+        for (int i = 0; i < elements.size(); i++) {
+            auto field = builder_->CreateStructGEP(expression.cast_type->type, lhs_val, i);
+            builder_->CreateStore(elements[i], field);
+        }
+        STACK_RET(nullptr);
     }
 }
 
@@ -616,7 +573,8 @@ void CodeGenerationEngine::visit(const AST::NullLiteralExpression &) {
     STACK_RET(ConstantPointerNull::getNullValue(PointerType::get(*llvm_context_, 0)));
 }
 
-void CodeGenerationEngine::writeCode(std::filesystem::path &filename, const std::string &target_triple, int filetype) {
+void CodeGenerationEngine::writeCode(std::filesystem::path &filename, const std::string &target_triple,
+                                     int filetype) const {
     CodeGenFileType ft;
     switch (filetype) {
         case 0:

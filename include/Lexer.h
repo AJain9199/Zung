@@ -94,29 +94,29 @@ public:
 
     bool hasMoreTokens();
 
-    enum TokenType get();
+    TokenType get();
 
     /* Getters for accessing token values */
-    [[nodiscard]] enum Keyword keyword() const;
+    [[nodiscard]] Keyword keyword() const;
 
     [[nodiscard]] std::string identifier() const;
 
-    [[nodiscard]] enum Operator operator_token() const;
+    [[nodiscard]] Operator operator_token() const;
 
     [[nodiscard]] char character() const;
 
     [[nodiscard]] int numeric_literal() const;
 
-    [[nodiscard]] enum DeclarationSpecifier declaration_specifier() const;
+    [[nodiscard]] DeclarationSpecifier declaration_specifier() const;
 
-    [[nodiscard]] enum DefaultType default_type() const;
+    [[nodiscard]] DefaultType default_type() const;
 
     [[nodiscard]] bool boolean_literal() const;
 
     [[nodiscard]] double float_literal() const;
 
 private:
-    enum TokenType getToken();
+    TokenType getToken();
 
     void next();
 
@@ -130,13 +130,13 @@ private:
     char char_value_ = 0;
     bool boolean_val_ = false;
     std::string identifier_{};
-    enum Operator operator_{};
+    Operator operator_{};
     int int_val_ = 0;
     double float_val_ = 0;
-    enum Keyword keyword_{};
-    enum DeclarationSpecifier declaration_specifier_{};
-    enum DefaultType default_type_{};
-    enum TokenType current_token_{};
+    Keyword keyword_{};
+    DeclarationSpecifier declaration_specifier_{};
+    DefaultType default_type_{};
+    TokenType current_token_{};
 };
 
 #endif //ZUNG_LEXER_H

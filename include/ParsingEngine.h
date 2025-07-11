@@ -88,9 +88,9 @@ private:
 
 
     void eat(TokenType t);
-    void eat(enum Keyword K);
+    void eat(Keyword K);
     void eat(char C);
-    void eat(enum Operator op);
+    void eat(Operator op);
 
     template<typename ...Tokens>
     auto is(Tokens... tokens);
@@ -98,16 +98,16 @@ private:
     std::string eat_identifier();
 
     bool is(char C);
-    bool is(enum Keyword K);
+    bool is(Keyword K);
     bool is(TokenType T);
-    bool is(enum Operator op);
+    bool is(Operator op);
 
     Symbols::SymbolTable *symTab_{};
     Symbols::SymbolTable *globalSymTab_{};
     Symbols::FunctionTable *funcTab_{};
 
-    static std::map<enum Operator, int> precedence;
-    static inline int getTokenPrecedence(enum Operator op) {
+    static std::map<Operator, int> precedence;
+    static int getTokenPrecedence(Operator op) {
         int prec = precedence[op];
         if (prec <= 0) {
             return -1;

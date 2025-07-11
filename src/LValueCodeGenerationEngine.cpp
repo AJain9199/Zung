@@ -13,12 +13,14 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::FieldAcc
     if (expr.struct_->assignable()) {
         expr.struct_->accept(*this);
         auto base_struct = engine_->stack_get<llvm::AllocaInst *>();
-        auto get_field = engine_->builder_->CreateStructGEP(expr.struct_->type(engine_->llvm_context_.get())->type, base_struct, expr.field.idx);
+        auto get_field = engine_->builder_->CreateStructGEP(expr.struct_->type(engine_->llvm_context_.get())->type,
+                                                            base_struct, expr.field.idx);
         engine_->stack_return(get_field);
     } else {
         expr.struct_->accept(*this);
         auto *struct_ptr = engine_->stack_get<llvm::Value *>();
-        auto get_field = engine_->builder_->CreateStructGEP(expr.struct_->type(engine_->llvm_context_.get())->type, struct_ptr, expr.field.idx);
+        auto get_field = engine_->builder_->CreateStructGEP(expr.struct_->type(engine_->llvm_context_.get())->type,
+                                                            struct_ptr, expr.field.idx);
         engine_->stack_return(get_field);
     }
 }
@@ -29,7 +31,7 @@ void CodeGenerationEngine::LValueCodeGenerationEngine::visit(const AST::ArrayInd
 
     std::vector<llvm::Value *> indices;
     indices.reserve(expression.index.size());
-    for (auto &i : expression.index) {
+    for (auto &i: expression.index) {
         i->accept(*engine_);
         indices.push_back(engine_->stack_get<llvm::Value *>());
     }
